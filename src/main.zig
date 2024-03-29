@@ -2,6 +2,7 @@ const std = @import("std");
 const zap = @import("zap");
 const print = std.debug.print;
 
+// TODO: replace std.mem.Allocator w/ an arena alloc
 fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]u8 {
     const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
         print("Failed to open file '{s}': {}", .{ file_path, err });
@@ -42,7 +43,7 @@ pub fn main() !void {
     });
     try listener.listen();
 
-    std.debug.print("Listening on 0.0.0.0:3000\n", .{});
+    std.debug.print("\nListening on 0.0.0.0:3000\n", .{});
 
     zap.start(.{
         .threads = 2,
