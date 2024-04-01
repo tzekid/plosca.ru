@@ -527,7 +527,7 @@ article input[type="checkbox"].cbi:not(:checked):disabled + label:before {
 .cbl {
     cursor: pointer;
     padding: 16px 16px 16px 16px;
-    z-index: 0px;
+    z-index: 0;
     font-size: 18px;
 }
 article li {
