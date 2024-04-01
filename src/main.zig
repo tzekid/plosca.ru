@@ -2,6 +2,8 @@ const std = @import("std");
 const zap = @import("zap");
 const print = std.debug.print;
 
+const STATIC_FOLDER = "static_old";
+
 const MyHashContext = struct {
     pub fn hash(self: @This(), key: []const u8) u64 {
         _ = self;
@@ -51,9 +53,9 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
 fn onRequest(r: zap.Request) void {
     r.setStatus(.not_found);
 
-    const file_path = "static_old/404.html";
+    const file_path: []const u8 = STATIC_FOLDER ++ "/404.html";
 
-    const err_404_page = readFileToString(std.heap.page_allocator, file_path) catch |err| {
+    const err_404_page: []const u8 = readFileToString(std.heap.page_allocator, file_path) catch |err| {
         std.log.err("Error: {}", .{err});
         return;
     } orelse {
@@ -68,7 +70,7 @@ pub fn main() !void {
     var listener = zap.HttpListener.init(.{
         .port = 3000,
         .on_request = onRequest,
-        .public_folder = "static_old",
+        .public_folder = STATIC_FOLDER,
         .log = true,
     });
 
