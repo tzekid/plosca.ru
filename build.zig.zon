@@ -1,12 +1,16 @@
 .{
     .name = "tzekid.github.io",
     .version = "0.0.1",
-
     .dependencies = .{
-        // zap v0.5.1
+        // zap v0.7.0
         .zap = .{
-            .url = "https://github.com/zigzap/zap/archive/refs/tags/v0.5.1.tar.gz",
-            .hash = "1220d4802fb09d4e99c0e7265f90d6f3cfdc3e5e31c1b05f0924ee2dd26d9d6dbbf4",
+            .url = "https://github.com/zigzap/zap/archive/3f9c7d0f6b19a2ae32ba5e1a58681512c6ffc86d.tar.gz",
+            .hash = "1220b288730fba16ff43de4d3044ee195af17f39b28f3b8cd39bc0a08beda9ce614a",
         },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
     },
 }
