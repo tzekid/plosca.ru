@@ -6,10 +6,10 @@ RUN pacman -Syu --noconfirm
 RUN pacman -S --noconfirm git base-devel wget zig 
 
 # Copy static folder, src and build.zig build.zig.zon to the working directory
-COPY ../static /app/static
-COPY ../src /app/src
-COPY ../build.zig /app/build.zig
-COPY ../build.zig.zon /app/build.zig.zon
+COPY static /app/static
+COPY src /app/src
+COPY build.zig /app/build.zig
+COPY build.zig.zon /app/build.zig.zon
 
 # go to the working directory
 RUN cd /app
