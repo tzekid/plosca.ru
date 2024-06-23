@@ -6,7 +6,8 @@ RUN pacman -Syu --noconfirm
 RUN pacman -S --noconfirm git base-devel wget zig 
 
 # clone the repository
-RUN git clone https://github.com/tzekid/tzekid.github.io.git /app
+WORKDIR /app
+RUN git clone https://github.com/tzekid/plosca.ru /app  --depth 1 
 
 # # Copy static folder, src and build.zig build.zig.zon to the working directory
 # COPY static /app/static
@@ -16,7 +17,6 @@ RUN git clone https://github.com/tzekid/tzekid.github.io.git /app
 
 # go to the working directory
 RUN cd /app
-WORKDIR /app
 
 # Build the executable using zig
 RUN zig build
