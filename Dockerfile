@@ -21,8 +21,8 @@ RUN cd /app
 # Build the executable using zig
 RUN zig build
 
-RUN pacman -Rns --noconfirm git base-devel wget zig
-RUN pacman -Scc --noconfir
+# RUN pacman -Rns --noconfirm git base-devel wget zig
+# RUN pacman -Scc --noconfir
 
 # Expose port 3000
 EXPOSE 3000
