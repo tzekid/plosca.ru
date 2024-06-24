@@ -5,11 +5,5 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - "NO_CACHE=${NO_CACHE}"
     ports:
       - "3000:3000"
-
-# Environment variable to disable cache
-args:
-  - NO_CACHE=1
