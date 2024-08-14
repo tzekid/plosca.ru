@@ -29,7 +29,7 @@ RUN zig build -Doptimize=ReleaseFast
 # RUN pacman -Scc --noconfir
 
 
-WORKDIR /app
+# WORKDIR /app
 # COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
 COPY /app/zig-out/bin/tzekid_website /app/tzekid_website
 # COPY . .
