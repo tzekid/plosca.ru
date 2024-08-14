@@ -1,5 +1,5 @@
 # Use the Arch Linux base image for linux/amd64 architecture
-FROM --platform=linux/amd64 archlinux:latest
+FROM --platform=linux/amd64 archlinux:latest as builder
 
 # Install required packages: git, base-devel, wget, and zig
 RUN pacman -Syu --noconfirm 
@@ -21,14 +21,19 @@ COPY . .
 # RUN cd /app
 
 # Build the executable using zig
-RUN zig build
+RUN zig build -Drelease-fast
 
 # RUN pacman -Rns --noconfirm git base-devel wget zig
 # RUN pacman -Scc --noconfir
+
+
+FROM --platform=linux/amd64 archlinux:latest as builder
+WORKDIR /app
+COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
 
 # Expose port 3000
 EXPOSE 3000
 
 # Run the executable from the root of the repository
-CMD ["/app/zig-out/bin/tzekid_website"]
+CMD ["/app/tzekid_website"]
 
