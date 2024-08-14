@@ -31,6 +31,7 @@ RUN zig build -Doptimize=ReleaseFast
 FROM --platform=linux/amd64 archlinux:latest
 WORKDIR /app
 COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
+COPY . .
 
 # Expose port 3000
 EXPOSE 3000
