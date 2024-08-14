@@ -27,7 +27,7 @@ RUN zig build -Drelease-fast
 # RUN pacman -Scc --noconfir
 
 
-FROM --platform=linux/amd64 archlinux:latest as builder
+FROM --platform=linux/amd64 archlinux:latest
 WORKDIR /app
 COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
 
