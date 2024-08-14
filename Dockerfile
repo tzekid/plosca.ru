@@ -27,8 +27,6 @@ RUN zig build -Doptimize=ReleaseFast
 # RUN pacman -Rns --noconfirm git base-devel wget zig
 # RUN pacman -Scc --noconfir
 
-
-FROM --platform=linux/amd64 archlinux:latest
 WORKDIR /app
 COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
 COPY . .

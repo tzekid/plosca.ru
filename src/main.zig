@@ -63,6 +63,8 @@ fn onRequest(r: zap.Request) void {
         return;
     };
 
+    r.setStatus(.not_found);
+
     r.sendBody(err_404_page) catch return;
 }
 
