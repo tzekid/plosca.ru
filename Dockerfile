@@ -22,7 +22,7 @@ COPY . .
 
 # Build the executable using zig
 #RUN zig build -Drelease-fast
-RUN zig build -Drelease-fast
+RUN zig build -Doptimize=ReleaseFast
 
 # RUN pacman -Rns --noconfirm git base-devel wget zig
 # RUN pacman -Scc --noconfir
