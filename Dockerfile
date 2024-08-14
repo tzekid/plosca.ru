@@ -29,8 +29,9 @@ RUN zig build -Doptimize=ReleaseFast
 
 
 WORKDIR /app
-COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
-COPY . .
+# COPY --from=builder /app/zig-out/bin/tzekid_website /app/tzekid_website
+COPY /app/zig-out/bin/tzekid_website /app/tzekid_website
+# COPY . .
 
 # Expose port 3000
 EXPOSE 3000
