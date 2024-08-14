@@ -1,5 +1,6 @@
 # Use the Arch Linux base image for linux/amd64 architecture
-FROM --platform=linux/amd64 archlinux:latest as builder
+# FROM --platform=linux/amd64 archlinux:latest as builder
+FROM --platform=linux/amd64 archlinux:latest
 
 # Install required packages: git, base-devel, wget, and zig
 RUN pacman -Syu --noconfirm 
