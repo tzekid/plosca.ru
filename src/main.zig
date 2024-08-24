@@ -53,7 +53,7 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
 fn onRequest(r: zap.Request) void {
     if (r.path) |the_path| {
         var file_contents: ?[]const u8 = null;
-        var file_path: []const u8 = null;
+        var file_path: []const u8 = ""; // I am going to hell for this
         var content_type: []const u8 = "text/plain; charset=utf-8"; // default
 
         if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "")) {
