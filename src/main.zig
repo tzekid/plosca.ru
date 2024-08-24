@@ -53,6 +53,7 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
 fn onRequest(r: zap.Request) void {
     if (r.path) |the_path| {
         var file_contents: ?[]const u8 = null;
+        var content_type: []const u8 = "text/plain; charset=utf-8"; // default
 
         if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "")) {
             const file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/index.html", .{STATIC_FOLDER}) catch |err| {
@@ -116,6 +117,15 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
+            if (std.mem.endsWith(u8, the_path, ".html")) {
+                content_type = "text/html; charset=utf-8";
+            } else if (std.mem.endsWith(u8, the_path, ".css")) {
+                content_type = "text/css; charset=utf-8";
+            } else if (std.mem.endsWith(u8, the_path, ".js")) {
+                content_type = "text/javascript; charset=utf-8";
+            } // Add more cases for other file types as needed
+
+            r.setHeader("Content-Type", content_type) catch return;
             r.sendBody(contents) catch return;
         } else {
             const file_path_404 = STATIC_FOLDER ++ "/404.html";
