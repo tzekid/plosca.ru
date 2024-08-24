@@ -53,10 +53,11 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
 fn onRequest(r: zap.Request) void {
     if (r.path) |the_path| {
         var file_contents: ?[]const u8 = null;
+        var file_path: ?[]const u8 = null;
         var content_type: []const u8 = "text/plain; charset=utf-8"; // default
 
         if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "")) {
-            const file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/index.html", .{STATIC_FOLDER}) catch |err| {
+            file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/index.html", .{STATIC_FOLDER}) catch |err| {
                 std.log.err("Error allocating memory for file path: {}", .{err});
                 return;
             };
@@ -77,7 +78,7 @@ fn onRequest(r: zap.Request) void {
                 r.sendBody(err_404_page) catch return;
             };
         } else if (std.mem.indexOf(u8, the_path, ".")) |_| {
-            const file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}", .{ STATIC_FOLDER, the_path }) catch |err| {
+            file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}", .{ STATIC_FOLDER, the_path }) catch |err| {
                 std.log.err("Error allocating memory for file path: {}", .{err});
                 return;
             };
@@ -117,17 +118,16 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
-            if (file_path) |path_name| {
-                if (std.mem.endsWith(u8, path_name, ".html")) {
-                    content_type = "text/html; charset=utf-8";
-                } else if (std.mem.endsWith(u8, path_name, ".css")) {
-                    content_type = "text/css; charset=utf-8";
-                } else if (std.mem.endsWith(u8, path_name, ".js")) {
-                    content_type = "text/javascript; charset=utf-8";
-                } // Add more cases for other file types as needed
+            if (std.mem.endsWith(u8, file_path, ".html")) {
+                content_type = "text/html; charset=utf-8";
+            } else if (std.mem.endsWith(u8, file_path, ".css")) {
+                content_type = "text/css; charset=utf-8";
+            } else if (std.mem.endsWith(u8, file_path, ".js")) {
+                content_type = "text/javascript; charset=utf-8";
+            } // Add more cases for other file types as needed
 
-                r.setHeader("Content-Type", content_type) catch return;
-                r.sendBody(contents) catch return;
+            r.setHeader("Content-Type", content_type) catch return;
+            r.sendBody(contents) catch return;
         } else {
             const file_path_404 = STATIC_FOLDER ++ "/404.html";
             const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
