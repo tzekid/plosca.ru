@@ -2,6 +2,88 @@ const std = @import("std");
 const zap = @import("zap");
 const print = std.debug.print;
 
+const MIME_TYPES = std.ComptimeStringMap(
+    []const u8,
+    .{
+        .{ "html", "text/html; charset=utf-8" },
+        .{ "htm", "text/html; charset=utf-8" },
+        .{ "css", "text/css; charset=utf-8" },
+        .{ "js", "text/javascript; charset=utf-8" },
+        .{ "mjs", "text/javascript; charset=utf-8" },
+        .{ "json", "application/json" },
+        .{ "jsonld", "application/ld+json" },
+        .{ "xml", "application/xml" },
+        .{ "xul", "application/vnd.mozilla.xul+xml" },
+        .{ "txt", "text/plain; charset=utf-8" },
+        .{ "csh", "application/x-csh" },
+        .{ "sh", "application/x-sh" },
+        .{ "csv", "text/csv; charset=utf-8" },
+        .{ "ics", "text/calendar" },
+        .{ "aac", "audio/aac" },
+        .{ "abw", "application/x-abiword" },
+        .{ "apng", "image/apng" },
+        .{ "arc", "application/x-freearc" },
+        .{ "avif", "image/avif" },
+        .{ "avi", "video/x-msvideo" },
+        .{ "azw", "application/vnd.amazon.ebook" },
+        .{ "bin", "application/octet-stream" },
+        .{ "bmp", "image/bmp" },
+        .{ "bz", "application/x-bzip" },
+        .{ "bz2", "application/x-bzip2" },
+        .{ "cda", "application/x-cdf" },
+        .{ "doc", "application/msword" },
+        .{ "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+        .{ "eot", "application/vnd.ms-fontobject" },
+        .{ "epub", "application/epub+zip" },
+        .{ "gz", "application/gzip" },
+        .{ "gif", "image/gif" },
+        .{ "ico", "image/vnd.microsoft.icon" },
+        .{ "jar", "application/java-archive" },
+        .{ "jpeg", "image/jpeg" },
+        .{ "mid", "audio/midi" },
+        .{ "midi", "audio/midi" },
+        .{ "mp3", "audio/mpeg" },
+        .{ "mp4", "video/mp4" },
+        .{ "mpeg", "video/mpeg" },
+        .{ "mpkg", "application/vnd.apple.installer+xml" },
+        .{ "odp", "application/vnd.oasis.opendocument.presentation" },
+        .{ "ods", "application/vnd.oasis.opendocument.spreadsheet" },
+        .{ "odt", "application/vnd.oasis.opendocument.text" },
+        .{ "oga", "audio/ogg" },
+        .{ "ogv", "video/ogg" },
+        .{ "ogx", "application/ogg" },
+        .{ "opus", "audio/ogg" },
+        .{ "otf", "font/otf" },
+        .{ "png", "image/png" },
+        .{ "pdf", "application/pdf" },
+        .{ "php", "application/x-httpd-php" },
+        .{ "ppt", "application/vnd.ms-powerpoint" },
+        .{ "pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
+        .{ "rar", "application/vnd.rar" },
+        .{ "rtf", "application/rtf" },
+        .{ "svg", "image/svg+xml" },
+        .{ "tar", "application/x-tar" },
+        .{ "tif", "image/tiff" },
+        .{ "tiff", "image/tiff" },
+        .{ "ts", "video/mp2t" },
+        .{ "ttf", "font/ttf" },
+        .{ "vsd", "application/vnd.visio" },
+        .{ "wav", "audio/wav" },
+        .{ "weba", "audio/webm" },
+        .{ "webm", "video/webm" },
+        .{ "webp", "image/webp" },
+        .{ "woff", "font/woff" },
+        .{ "woff2", "font/woff2" },
+        .{ "xhtml", "application/xhtml+xml" },
+        .{ "xls", "application/vnd.ms-excel" },
+        .{ "xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+        .{ "zip", "application/zip" },
+        .{ "3gp", "video/3gpp" },
+        .{ "3g2", "video/3gpp2" },
+        .{ "7z", "application/x-7z-compressed" },
+    },
+);
+
 const STATIC_FOLDER = "static_old";
 
 const MyHashContext = struct {
@@ -118,13 +200,7 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
-            if (std.mem.endsWith(u8, file_path, ".html")) {
-                content_type = "text/html; charset=utf-8";
-            } else if (std.mem.endsWith(u8, file_path, ".css")) {
-                content_type = "text/css; charset=utf-8";
-            } else if (std.mem.endsWith(u8, file_path, ".js")) {
-                content_type = "text/javascript; charset=utf-8";
-            } // Add more cases for other file types as needed
+            content_type = MIME_TYPES.get(the_path) orelse "application/octet-stream";
 
             r.setHeader("Content-Type", content_type) catch return;
             r.sendBody(contents) catch return;
