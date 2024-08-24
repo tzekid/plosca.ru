@@ -134,7 +134,7 @@ pub fn main() !void {
     var listener = zap.HttpListener.init(.{
         .port = 3000,
         .on_request = onRequest,
-        .public_folder = STATIC_FOLDER,
+        // .public_folder = STATIC_FOLDER,
         .log = true,
     });
 
