@@ -99,12 +99,12 @@ fn onRequest(r: zap.Request) void {
                 r.sendBody(err_404_page) catch return;
             };
         } else {
-            const file_path_with_html = std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}.html", .{ STATIC_FOLDER, the_path }) catch |err| {
+            file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}.html", .{ STATIC_FOLDER, the_path }) catch |err| {
                 std.log.err("Error allocating memory for file path: {}", .{err});
                 return;
             };
 
-            file_contents = readFileToString(std.heap.page_allocator, file_path_with_html) catch {
+            file_contents = readFileToString(std.heap.page_allocator, file_path) catch {
                 // serve 404
                 const file_path_404 = STATIC_FOLDER ++ "/404.html";
                 const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
