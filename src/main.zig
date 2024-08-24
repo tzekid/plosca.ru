@@ -170,6 +170,7 @@ fn onRequest(r: zap.Request) void {
                 }
             }
 
+            r.setStatus(.ok);
             r.setHeader("Content-Type", content_type) catch return;
             r.sendBody(contents) catch return;
         }
