@@ -66,7 +66,11 @@ fn onRequest(r: zap.Request) void {
                 const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
                     std.log.err("Error reading 404 page: {}", .{err_404});
                     return; // Or handle this error in another way
-                } orelse unreachable; // We assume 404.html exists and can be read
+                    // } orelse unreachable; // We assume 404.html exists and can be read
+                } orelse {
+                    r.setStatus(.not_found);
+                    r.sendBody("404") catch return;
+                };
 
                 r.setStatus(.not_found);
                 r.sendBody(err_404_page) catch return;
@@ -83,13 +87,17 @@ fn onRequest(r: zap.Request) void {
                 const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
                     std.log.err("Error reading 404 page: {}", .{err_404});
                     return; // Or handle this error in another way
-                } orelse unreachable; // We assume 404.html exists and can be read
+                    // } orelse unreachable; // We assume 404.html exists and can be read
+                } orelse {
+                    r.setStatus(.not_found);
+                    r.sendBody("404") catch return;
+                };
 
                 r.setStatus(.not_found);
                 r.sendBody(err_404_page) catch return;
             };
         } else {
-            const file_path_with_html = std.fmt.allocPrint(std.heap.page_allocator, "{s}{s}.html", .{ STATIC_FOLDER, the_path }) catch |err| {
+            const file_path_with_html = std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}.html", .{ STATIC_FOLDER, the_path }) catch |err| {
                 std.log.err("Error allocating memory for file path: {}", .{err});
                 return;
             };
