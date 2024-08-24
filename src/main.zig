@@ -134,7 +134,7 @@ pub fn main() !void {
     var listener = zap.HttpListener.init(.{
         .port = 3000,
         .on_request = onRequest,
-        // .public_folder = STATIC_FOLDER,
+        .public_folder = STATIC_FOLDER,
         .log = true,
     });
 
@@ -143,8 +143,8 @@ pub fn main() !void {
     std.debug.print("\nListening on 0.0.0.0:3000\n", .{});
 
     zap.start(.{
-        .threads = 2,
-        .workers = 2,
+        .threads = 8,
+        .workers = 8,
     });
 
     file_cache.deinit();
