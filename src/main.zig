@@ -22,12 +22,12 @@ const FileCache = std.hash_map.HashMap([]const u8, []const u8, MyHashContext, st
 var file_cache = FileCache.init(std.heap.page_allocator);
 
 fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]const u8 {
-    if (file_cache.get(file_path)) |file_contents| {
-        print("Serving file '{s}' from cache\n", .{file_path});
-        return file_contents;
-    } else {
-        print("File '{s}' is not cached\n", .{file_path});
-    }
+    // if (file_cache.get(file_path)) |file_contents| {
+    //     print("Serving file '{s}' from cache\n", .{file_path});
+    //     return file_contents;
+    // } else {
+    //     print("File '{s}' is not cached\n", .{file_path});
+    // }
 
     const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
         print("Failed to open file '{s}': {}", .{ file_path, err });
@@ -40,13 +40,13 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
         return null;
     };
 
-    file_cache.put(file_path, file_contents) catch {
-        print("Failed to cache file '{s}'\n", .{file_path});
-        allocator.free(file_contents);
-        return null;
-    };
+    // file_cache.put(file_path, file_contents) catch {
+    //     print("Failed to cache file '{s}'\n", .{file_path});
+    //     allocator.free(file_contents);
+    //     return null;
+    // };
 
-    print("File '{s}' cached\n", .{file_path});
+    // print("File '{s}' cached\n", .{file_path});
     return file_contents;
 }
 
