@@ -39,3 +39,4 @@ EXPOSE 3000
 
 # Run the executable from the root of the repository
 CMD ["/app/tzekid_website"]
+
