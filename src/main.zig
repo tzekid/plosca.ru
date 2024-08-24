@@ -51,28 +51,82 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
 }
 
 fn onRequest(r: zap.Request) void {
-    r.setStatus(.not_found);
+    if (r.path) |the_path| {
+        var file_contents: ?[]const u8 = null;
 
-    const file_path: []const u8 = STATIC_FOLDER ++ "/404.html";
+        if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "")) {
+            const file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/index.html", .{STATIC_FOLDER}) catch |err| {
+                std.log.err("Error allocating memory for file path: {}", .{err});
+                return;
+            };
 
-    const err_404_page: []const u8 = readFileToString(std.heap.page_allocator, file_path) catch |err| {
-        std.log.err("Error: {}", .{err});
-        return;
-    } orelse {
-        std.log.err("File '{s}' is empty or could not be read", .{file_path});
-        return;
-    };
+            file_contents = readFileToString(std.heap.page_allocator, file_path) catch {
+                // serve 404
+                const file_path_404 = STATIC_FOLDER ++ "/404.html";
+                const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
+                    std.log.err("Error reading 404 page: {}", .{err_404});
+                    return; // Or handle this error in another way
+                } orelse unreachable; // We assume 404.html exists and can be read
 
-    r.setStatus(.not_found);
+                r.setStatus(.not_found);
+                r.sendBody(err_404_page) catch return;
+            };
+        } else if (std.mem.indexOf(u8, the_path, ".")) |_| {
+            const file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}{s}", .{ STATIC_FOLDER, the_path }) catch |err| {
+                std.log.err("Error allocating memory for file path: {}", .{err});
+                return;
+            };
 
-    r.sendBody(err_404_page) catch return;
+            file_contents = readFileToString(std.heap.page_allocator, file_path) catch {
+                // serve 404
+                const file_path_404 = STATIC_FOLDER ++ "/404.html";
+                const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
+                    std.log.err("Error reading 404 page: {}", .{err_404});
+                    return; // Or handle this error in another way
+                } orelse unreachable; // We assume 404.html exists and can be read
+
+                r.setStatus(.not_found);
+                r.sendBody(err_404_page) catch return;
+            };
+        } else {
+            const file_path_with_html = std.fmt.allocPrint(std.heap.page_allocator, "{s}{s}.html", .{ STATIC_FOLDER, the_path }) catch |err| {
+                std.log.err("Error allocating memory for file path: {}", .{err});
+                return;
+            };
+
+            file_contents = readFileToString(std.heap.page_allocator, file_path_with_html) catch {
+                // serve 404
+                const file_path_404 = STATIC_FOLDER ++ "/404.html";
+                const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
+                    std.log.err("Error reading 404 page: {}", .{err_404});
+                    return; // Or handle this error in another way
+                } orelse unreachable;
+
+                r.setStatus(.not_found);
+                r.sendBody(err_404_page) catch return;
+            };
+        }
+
+        if (file_contents) |contents| {
+            r.sendBody(contents) catch return;
+        } else {
+            const file_path_404 = STATIC_FOLDER ++ "/404.html";
+            const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
+                std.log.err("Error reading 404 page: {}", .{err_404});
+                return;
+            } orelse unreachable;
+
+            r.setStatus(.not_found);
+            r.sendBody(err_404_page) catch return;
+        }
+    }
 }
 
 pub fn main() !void {
     var listener = zap.HttpListener.init(.{
         .port = 3000,
         .on_request = onRequest,
-        .public_folder = STATIC_FOLDER,
+        // .public_folder = STATIC_FOLDER,
         .log = true,
     });
 
@@ -87,4 +141,3 @@ pub fn main() !void {
 
     file_cache.deinit();
 }
-//
