@@ -2,7 +2,7 @@ const std = @import("std");
 const zap = @import("zap");
 const print = std.debug.print;
 
-const MIME_TYPES = std.ComptimeStringMap(
+const MIME_TYPES = std.StaticStringMap(
     []const u8,
     .{
         .{ "html", "text/html; charset=utf-8" },
