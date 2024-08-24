@@ -118,11 +118,11 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
-            if (std.mem.indexOf(u8, file_path, ".html")) {
+            if (std.mem.endsWith(u8, file_path, ".html")) {
                 content_type = "text/html; charset=utf-8";
-            } else if (std.mem.indexOf(u8, file_path, ".css")) {
+            } else if (std.mem.endsWith(u8, file_path, ".css")) {
                 content_type = "text/css; charset=utf-8";
-            } else if (std.mem.indexOf(u8, file_path, ".js")) {
+            } else if (std.mem.endsWith(u8, file_path, ".js")) {
                 content_type = "text/javascript; charset=utf-8";
             } // Add more cases for other file types as needed
 
