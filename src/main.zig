@@ -117,16 +117,17 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
-            if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "") or std.mem.endsWith(u8, the_path, ".html")) {
-                content_type = "text/html; charset=utf-8";
-            } else if (std.mem.endsWith(u8, the_path, ".css")) {
-                content_type = "text/css; charset=utf-8";
-            } else if (std.mem.endsWith(u8, the_path, ".js")) {
-                content_type = "text/javascript; charset=utf-8";
-            } // Add more cases for other file types as needed
+            if (file_path) |path_name| {
+                if (std.mem.endsWith(u8, path_name, ".html")) {
+                    content_type = "text/html; charset=utf-8";
+                } else if (std.mem.endsWith(u8, path_name, ".css")) {
+                    content_type = "text/css; charset=utf-8";
+                } else if (std.mem.endsWith(u8, path_name, ".js")) {
+                    content_type = "text/javascript; charset=utf-8";
+                } // Add more cases for other file types as needed
 
-            r.setHeader("Content-Type", content_type) catch return;
-            r.sendBody(contents) catch return;
+                r.setHeader("Content-Type", content_type) catch return;
+                r.sendBody(contents) catch return;
         } else {
             const file_path_404 = STATIC_FOLDER ++ "/404.html";
             const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
