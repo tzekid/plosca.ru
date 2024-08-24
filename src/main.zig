@@ -4,30 +4,30 @@ const print = std.debug.print;
 
 const STATIC_FOLDER = "static_old";
 
-const MyHashContext = struct {
-    pub fn hash(self: @This(), key: []const u8) u64 {
-        _ = self;
+// const MyHashContext = struct {
+//     pub fn hash(self: @This(), key: []const u8) u64 {
+//         _ = self;
 
-        return std.hash.Wyhash.hash(0, key);
-    }
+//         return std.hash.Wyhash.hash(0, key);
+//     }
 
-    pub fn eql(self: @This(), a: []const u8, b: []const u8) bool {
-        _ = self;
-        return std.mem.eql(u8, a, b);
-    }
-};
+//     pub fn eql(self: @This(), a: []const u8, b: []const u8) bool {
+//         _ = self;
+//         return std.mem.eql(u8, a, b);
+//     }
+// };
 
-const FileCache = std.hash_map.HashMap([]const u8, []const u8, MyHashContext, std.hash_map.default_max_load_percentage);
+// const FileCache = std.hash_map.HashMap([]const u8, []const u8, MyHashContext, std.hash_map.default_max_load_percentage);
 
-var file_cache = FileCache.init(std.heap.page_allocator);
+// var file_cache = FileCache.init(std.heap.page_allocator);
 
 fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]const u8 {
-    if (file_cache.get(file_path)) |file_contents| {
-        print("Serving file '{s}' from cache\n", .{file_path});
-        return file_contents;
-    } else {
-        print("File '{s}' is not cached\n", .{file_path});
-    }
+    // if (file_cache.get(file_path)) |file_contents| {
+    //     print("Serving file '{s}' from cache\n", .{file_path});
+    //     return file_contents;
+    // } else {
+    //     print("File '{s}' is not cached\n", .{file_path});
+    // }
 
     const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
         print("Failed to open file '{s}': {}", .{ file_path, err });
@@ -40,13 +40,13 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
         return null;
     };
 
-    file_cache.put(file_path, file_contents) catch {
-        print("Failed to cache file '{s}'\n", .{file_path});
-        allocator.free(file_contents);
-        return null;
-    };
+    // file_cache.put(file_path, file_contents) catch {
+    //     print("Failed to cache file '{s}'\n", .{file_path});
+    //     allocator.free(file_contents);
+    //     return null;
+    // };
+    // print("File '{s}' cached\n", .{file_path});
 
-    print("File '{s}' cached\n", .{file_path});
     return file_contents;
 }
 
@@ -103,5 +103,5 @@ pub fn main() !void {
         .workers = 8,
     });
 
-    file_cache.deinit();
+    // file_cache.deinit();
 }
