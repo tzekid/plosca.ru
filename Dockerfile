@@ -9,7 +9,7 @@ COPY . .
 
 RUN zig build
 
-EXPOSE 3210
+EXPOSE 3000
 
 CMD ["/app/zig-out/bin/tzekid_website"]
 

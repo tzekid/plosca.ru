@@ -124,7 +124,7 @@ fn onRequest(r: zap.Request) void {
 
 pub fn main() !void {
     var listener = zap.HttpListener.init(.{
-        .port = 3210,
+        .port = 3000,
         .on_request = onRequest,
         // .public_folder = STATIC_FOLDER,
         .log = true,
@@ -132,7 +132,7 @@ pub fn main() !void {
 
     try listener.listen();
 
-    std.debug.print("\nListening on 0.0.0.0:3210\n", .{});
+    std.debug.print("\nListening on 0.0.0.0:3000\n", .{});
 
     zap.start(.{
         .threads = 2,
