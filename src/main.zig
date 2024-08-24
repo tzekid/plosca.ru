@@ -200,7 +200,14 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
-            content_type = MIME_TYPES.get(the_path) orelse "application/octet-stream";
+            // content_type = MIME_TYPES.get(the_path) orelse "application/octet-stream";
+            var extension = std.fs.path.extension(file_path);
+            if (extension.len > 0) {
+                extension = extension[1..]; // Remove the leading dot
+            }
+            if (MIME_TYPES.get(extension)) |mime_type| {
+                content_type = mime_type;
+            }
 
             r.setHeader("Content-Type", content_type) catch return;
             r.sendBody(contents) catch return;
