@@ -12,3 +12,4 @@ RUN zig build
 EXPOSE 3210
 
 CMD ["/app/zig-out/bin/tzekid_website"]
+
