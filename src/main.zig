@@ -117,7 +117,8 @@ fn onRequest(r: zap.Request) void {
         }
 
         if (file_contents) |contents| {
-            if (std.mem.endsWith(u8, the_path, ".html")) {
+            // if (std.mem.endsWith(u8, the_path, ".html")) {
+            if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "") or std.mem.endsWith(u8, the_path, ".html") {
                 content_type = "text/html; charset=utf-8";
             } else if (std.mem.endsWith(u8, the_path, ".css")) {
                 content_type = "text/css; charset=utf-8";
