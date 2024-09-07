@@ -4,31 +4,7 @@ const print = std.debug.print;
 
 const STATIC_FOLDER = "static_old";
 
-// const MyHashContext = struct {
-//     pub fn hash(self: @This(), key: []const u8) u64 {
-//         _ = self;
-
-//         return std.hash.Wyhash.hash(0, key);
-//     }
-
-//     pub fn eql(self: @This(), a: []const u8, b: []const u8) bool {
-//         _ = self;
-//         return std.mem.eql(u8, a, b);
-//     }
-// };
-
-// const FileCache = std.hash_map.HashMap([]const u8, []const u8, MyHashContext, std.hash_map.default_max_load_percentage);
-
-// var file_cache = FileCache.init(std.heap.page_allocator);
-
 fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]const u8 {
-    // if (file_cache.get(file_path)) |file_contents| {
-    //     print("Serving file '{s}' from cache\n", .{file_path});
-    //     return file_contents;
-    // } else {
-    //     print("File '{s}' is not cached\n", .{file_path});
-    // }
-
     const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
         print("Failed to open file '{s}': {}", .{ file_path, err });
         return null;
@@ -40,20 +16,12 @@ fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]con
         return null;
     };
 
-    // file_cache.put(file_path, file_contents) catch {
-    //     print("Failed to cache file '{s}'\n", .{file_path});
-    //     allocator.free(file_contents);
-    //     return null;
-    // };
-    // print("File '{s}' cached\n", .{file_path});
-
     return file_contents;
 }
 
 fn onRequest(r: zap.Request) void {
     if (r.path) |the_path| {
         var file_path: []const u8 = "";
-        // var content_type: []const u8 = "text/plain; charset=utf-8"; // default
 
         if (std.mem.eql(u8, the_path, "/") or std.mem.eql(u8, the_path, "")) {
             file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/index.html", .{STATIC_FOLDER}) catch return;
@@ -87,6 +55,8 @@ fn onRequest(r: zap.Request) void {
 }
 
 pub fn main() !void {
+    // TODO: compile md -> html
+
     var listener = zap.HttpListener.init(.{
         .port = 3000,
         .on_request = onRequest,
