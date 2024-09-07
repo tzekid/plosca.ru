@@ -31,26 +31,14 @@ fn onRequest(r: zap.Request) void {
             file_path = std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}.html", .{ STATIC_FOLDER, the_path }) catch return;
         }
 
-        const file_contents = readFileToString(std.heap.page_allocator, file_path) catch {
-            // Handle the error and serve 404
-            const file_path_404 = STATIC_FOLDER ++ "/404.html";
-            const err_404_page = readFileToString(std.heap.page_allocator, file_path_404) catch |err_404| {
-                std.log.err("Error reading 404 page: {}", .{err_404});
-                return;
-            } orelse {
-                r.setStatus(.not_found);
-                r.sendBody("404") catch return;
-            };
-
+        r.setContentTypeFromFilename(file_path) catch {
             r.setStatus(.not_found);
-            r.sendBody(err_404_page) catch return;
+            r.sendFile(STATIC_FOLDER ++ "/404.html") catch return;
         };
-
-        if (file_contents) |contents| {
-            r.setStatus(.ok);
-            r.setContentTypeFromFilename(file_path) catch return;
-            r.sendBody(contents) catch return;
-        }
+        r.sendFile(file_path) catch {
+            r.setStatus(.not_found);
+            r.sendFile(STATIC_FOLDER ++ "/404.html") catch return;
+        };
     }
 }
 
@@ -60,7 +48,6 @@ pub fn main() !void {
     var listener = zap.HttpListener.init(.{
         .port = 3000,
         .on_request = onRequest,
-        // .public_folder = STATIC_FOLDER,
         .log = true,
     });
 
@@ -72,6 +59,4 @@ pub fn main() !void {
         .threads = 8,
         .workers = 8,
     });
-
-    // file_cache.deinit();
 }
