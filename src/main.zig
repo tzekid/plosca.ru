@@ -4,21 +4,6 @@ const print = std.debug.print;
 
 const STATIC_FOLDER = "static_old";
 
-fn readFileToString(allocator: std.mem.Allocator, file_path: []const u8) !?[]const u8 {
-    const file = std.fs.cwd().openFile(file_path, .{}) catch |err| {
-        print("Failed to open file '{s}': {}", .{ file_path, err });
-        return null;
-    };
-    defer file.close();
-
-    const file_contents = file.readToEndAlloc(allocator, std.math.maxInt(usize)) catch |err| {
-        print("Failed to read file '{s}': {}", .{ file_path, err });
-        return null;
-    };
-
-    return file_contents;
-}
-
 fn onRequest(r: zap.Request) void {
     if (r.path) |the_path| {
         var file_path: []const u8 = "";
