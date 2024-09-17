@@ -7,7 +7,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN zig build
+RUN zig build -Doptimize=ReleaseFast -Dcpu=baseline
 
 EXPOSE 3000
 
