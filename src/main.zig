@@ -98,7 +98,8 @@ pub fn main() !void {
     std.debug.print("\nListening on 0.0.0.0:3000\n", .{});
 
     zap.start(.{
-        .threads = 4,
-        .workers = 4,
+        // as per `/zap/tools/docserver.zig` for static stuff
+        .threads = 2,
+        .workers = 1,
     });
 }
