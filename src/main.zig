@@ -98,7 +98,7 @@ pub fn main() !void {
     std.debug.print("\nListening on 0.0.0.0:3000\n", .{});
 
     zap.start(.{
-        .threads = 8,
-        .workers = 8,
+        .threads = 4,
+        .workers = 4,
     });
 }
