@@ -8,7 +8,7 @@
         },
         .zigdown = .{
             .url = "https://github.com/JacobCrabill/zigdown/archive/refs/heads/main.tar.gz",
-            .hash = "122081244b9a2fd1a07b72e8ad774c0405e6459b476d62f1634917b1768818e8ee3f",
+            .hash = "1220ca61e7c5632f4359ad93c827a1aecb7d053bbcdd8c2be300a6810f3a00339293",
         },
     },
     .paths = .{
