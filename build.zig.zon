@@ -1,14 +1,10 @@
 .{
-    .name = "tzekid.github.io",
+    .name = "ploscaru",
     .version = "0.0.1",
     .dependencies = .{
         .zap = .{
             .url = "https://github.com/zigzap/zap/archive/refs/tags/v0.8.0.tar.gz",
             .hash = "12209936c3333b53b53edcf453b1670babb9ae8c2197b1ca627c01e72670e20c1a21",
-        },
-        .zigdown = .{
-            .url = "https://github.com/JacobCrabill/zigdown/archive/refs/heads/main.tar.gz",
-            .hash = "12209ad2ac5ddfd7f0e54492b7fd270cad7f1eca9aa76978db827b9dbc72c7d9c9d0",
         },
     },
     .paths = .{

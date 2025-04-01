@@ -32,11 +32,11 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("zap", zap.module("zap"));
 
-    const zigdown = b.dependency("zigdown", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("zigdown", zigdown.module("zigdown"));
+    // const zigdown = b.dependency("zigdown", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    // exe.root_module.addImport("zigdown", zigdown.module("zigdown"));
 
     // END of dependencies
 
