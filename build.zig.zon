@@ -1,5 +1,6 @@
 .{
-    .name = "ploscaru",
+    .fingerprint = 0x9f5428c5031892e3,
+    .name = .ploscaru,
     .version = "0.0.1",
     .dependencies = .{
         .zap = .{
