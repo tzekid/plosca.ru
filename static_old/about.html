@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Pending structural refactor: see assistant explanation below. -->
 <html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
     <head>
         <meta charset="utf-8" />
@@ -41,8 +42,9 @@
                     local("Quando-Regular"),
                     url(https://fonts.gstatic.com/s/quando/v5/PH1InQe0rvp_yN3TzIuyyQ.woff2)
                         format("woff2");
-                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA,
-                    U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
+                unicode-range:
+                    U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC,
+                    U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
             }
 
             @font-face {
@@ -54,9 +56,10 @@
                     local("Quicksand-Regular"),
                     url(https://fonts.gstatic.com/s/quicksand/v8/6xKtdSZaM9iE8KbpRA_hK1QN.woff2)
                         format("woff2");
-                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC,
-                    U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122,
-                    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+                unicode-range:
+                    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                    U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+                    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
             }
         </style>
         <style>
@@ -82,8 +85,54 @@
                 list-style: none;
             }
         </style>
-        
+
         <link rel="stylesheet" href="/style.css" />
+        <style>
+            /* About page refined minimal inline overrides (legacy card/grid styles removed) */
+            article.about-page {
+                width: 960px;
+                max-width: 960px;
+            }
+            .about-hero {
+                text-align: center;
+                margin-top: 16px;
+                margin-bottom: 40px;
+            }
+            .about-hero h2 {
+                margin: 0;
+                font-size: 2.6em;
+                line-height: 1.05;
+            }
+            .about-tagline {
+                font-size: 1.05em;
+                font-weight: 500;
+                color: #555;
+                max-width: 700px;
+                margin: 10px auto 0;
+                text-align: center;
+            }
+            /* Pill badges used in At a Glance */
+            .pill-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 14px 0 0;
+                padding: 0;
+                list-style: none;
+            }
+            .pill-list li {
+                background: #fff7f6;
+                border: 1px solid #ffd9d3;
+                color: #b53a2b;
+                padding: 6px 12px 5px;
+                font-size: 0.72em;
+                font-weight: 600;
+                letter-spacing: 0.7px;
+                border-radius: 24px;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+        </style>
     </head>
     <body>
         <a name="top"></a>
@@ -129,42 +178,589 @@
                 </div>
             </nav>
         </div>
-        <article>
+        <article class="about-page">
             <header id="title-block-header">
-                <h1 class="title">About</h1>
-                <p class="author">Ilie Ploscaru</p>
+                <h1 class="title">Ilie Ploscaru</h1>
+                <p
+                    class="author"
+                    style="
+                        margin-top: 10px;
+                        margin-bottom: 22px;
+                        font-size: 1.05em;
+                        font-weight: 600;
+                    "
+                >
+                    Full‑Stack Developer &amp; Data Engineer
+                </p>
+                <!-- <p
+                    class="impact-intro"
+                    style="
+                        margin: 0 auto 18px;
+                        max-width: 760px;
+                        font-size: 0.95em;
+                        line-height: 1.5em;
+                        text-align: center;
+                    "
+                >
+                    Building reliable data &amp; software systems end‑to‑end:
+                    ingestion → modeling → BI enablement → ML integration.
+                </p> -->
+                <!-- <ul
+                    class="impact-highlights"
+                    style="
+                        list-style: none;
+                        padding: 0;
+                        margin: 0 auto 20px;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                        justify-content: center;
+                        font-size: 0.78em;
+                        letter-spacing: 0.5px;
+                    "
+                >
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-weight: 600;
+                        "
+                    >
+                        BI platform adopted by
+                        <span style="color: #d64937">X+</span> teams (single KPI
+                        hub)
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-weight: 600;
+                        "
+                    >
+                        Reporting automation saving ~<span
+                            style="color: #d64937"
+                            >Y</span
+                        >
+                        hrs/week (↓ manual prep ~<span style="color: #d64937"
+                            >Z%</span
+                        >)
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-weight: 600;
+                        "
+                    >
+                        Reliability & latency gains (~<span
+                            style="color: #d64937"
+                            >A%</span
+                        >
+                        fewer failures / ~<span style="color: #d64937">B%</span>
+                        faster)
+                    </li>
+                </ul> -->
+                <p
+                    class="header-cta"
+                    style="text-align: center; margin: 0 auto 36px"
+                >
+                    <a
+                        href="/resume.pdf"
+                        style="
+                            display: inline-block;
+                            background: #d64937;
+                            color: #fff;
+                            padding: 10px 22px 9px;
+                            border-radius: 28px;
+                            font-size: 0.8em;
+                            letter-spacing: 1px;
+                            text-decoration: none;
+                            font-weight: 600;
+                            box-shadow: 0 4px 10px -4px rgba(214, 73, 55, 0.45);
+                        "
+                    >
+                        Download Resume (PDF)
+                    </a>
+                </p>
             </header>
-            <p>
-                📖 Computer Science student at Goethe University Frankfurt with
-                an interest in psychology and tech.
+
+            <div class="about-hero">
+                <h2 style="margin-top: 0">
+                    Full‑Stack Developer &amp; Data Engineer
+                </h2>
+                <!-- <div class="about-tagline">
+                    Building reliable data &amp; software systems: from
+                    ingestion &amp; modeling to BI enablement and ML
+                    acceleration.
+                </div>
+                 -->
+            </div>
+
+            <!-- Reworked: switch from cramped grid cards to full-width, clearly structured stacked sections -->
+            <section class="about-section fw-block" id="at-a-glance">
+                <header class="about-section-head">
+                    <h3>At a Glance</h3>
+                </header>
+                <div
+                    class="fact-badges"
+                    style="
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                        margin: 0 0 18px;
+                    "
+                >
+                    <span
+                        class="fact"
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffe3dd;
+                            padding: 6px 12px;
+                            border-radius: 14px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.8px;
+                        "
+                        >Focus: Data Platforms &amp; BI</span
+                    >
+                    <span
+                        class="fact"
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffe3dd;
+                            padding: 6px 12px;
+                            border-radius: 14px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.8px;
+                        "
+                        >Strengths: Automation &amp; Observability</span
+                    >
+                    <span
+                        class="fact"
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffe3dd;
+                            padding: 6px 12px;
+                            border-radius: 14px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.8px;
+                        "
+                        >Location: Frankfurt</span
+                    >
+                    <span
+                        class="fact"
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffe3dd;
+                            padding: 6px 12px;
+                            border-radius: 14px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.8px;
+                        "
+                        >Languages: EN / DE / RO / FR (basic)</span
+                    >
+                </div>
+                <ul class="pill-list key-pills" style="margin-top: 4px">
+                    <li>Data Eng</li>
+                    <li>BI</li>
+                    <li>Full‑Stack</li>
+                    <li>ML</li>
+                    <li>CI/CD</li>
+                    <li
+                        style="
+                            background: #f9f9f9;
+                            border: 1px solid #eee;
+                            color: #666;
+                        "
+                    >
+                        Observability
+                    </li>
+                </ul>
+            </section>
+
+            <section class="about-section fw-block">
+                <header class="about-section-head">
+                    <h3>Core Competencies</h3>
+                </header>
+                <div class="competency-columns">
+                    <div class="competency-col">
+                        <h4>Data &amp; Analytics</h4>
+                        <ul>
+                            <li>Modeling &amp; lineage clarity</li>
+                            <li>ETL / ELT orchestration</li>
+                            <li>Data quality &amp; validation</li>
+                            <li>Metric design / BI enablement</li>
+                        </ul>
+                    </div>
+                    <div class="competency-col">
+                        <h4>Engineering</h4>
+                        <ul>
+                            <li>Service / API design</li>
+                            <li>Performance tuning</li>
+                            <li>Observability &amp; tracing</li>
+                            <li>Automation &amp; CI/CD</li>
+                        </ul>
+                    </div>
+                    <div class="competency-col">
+                        <h4>Applied ML</h4>
+                        <ul>
+                            <li>Feature prep &amp; pipelines</li>
+                            <li>Experiment loops</li>
+                            <li>Model integration</li>
+                            <li>Impact measurement</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="about-section fw-block">
+                <header class="about-section-head">
+                    <h3>Experience</h3>
+                </header>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="ti-header">
+                            <span class="ti-role"
+                                >Full‑Stack Dev / BI / Data Eng</span
+                            >
+                            <span class="ti-period">Dec 2021 – Present</span>
+                        </div>
+                        <div class="ti-org">Northern Data AG</div>
+                        <ul class="ti-points">
+                            <li>
+                                Co‑built BI & data platform adopted by X+ teams
+                                (centralized metrics).
+                            </li>
+                            <li>
+                                Automated reporting (saved ~Y analyst hrs/week;
+                                reduced manual prep ~Z%).
+                            </li>
+                            <li>
+                                Implemented data quality & lineage checks (cut
+                                incident MTTR ~A%).
+                            </li>
+                            <li>
+                                Optimized ingestion + model integration (latency
+                                ↓ ~B%, reliability ↑ ~C%).
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="ti-header">
+                            <span class="ti-role"
+                                >Data Scientist (Freelance)</span
+                            >
+                            <span class="ti-period">2020 &amp; 2021</span>
+                        </div>
+                        <ul class="ti-points">
+                            <li>
+                                ML experimentation &amp; feature engineering.
+                            </li>
+                            <li>
+                                Analytical insights tied to business outcomes.
+                            </li>
+                            <li>
+                                Delivered prototype models reducing manual
+                                analysis effort (~N% placeholder).
+                            </li>
+                            <li>
+                                Built reusable feature pipelines (improved model
+                                AUC by ~M pts).
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="ti-header">
+                            <span class="ti-role">Software Engineer</span>
+                            <span class="ti-period">2019 – 2020</span>
+                        </div>
+                        <div class="ti-org">Cloudflight</div>
+                        <ul class="ti-points">
+                            <li>Backend &amp; integration contributions.</li>
+                            <li>
+                                Collaborated across product &amp; engineering.
+                            </li>
+                            <li>
+                                Shipped backend features adopted by X+ client
+                                projects (placeholder).
+                            </li>
+                            <li>
+                                Improved integration test reliability (flakiness
+                                ↓ ~Y%).
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="about-section fw-block">
+                <header class="about-section-head">
+                    <h3>Education &amp; Languages</h3>
+                </header>
+                <div class="edu-lang">
+                    <div class="edu-block">
+                        <strong>Goethe University Frankfurt</strong><br />
+                        B.Sc. Computer Science (2018 – 2024)
+                    </div>
+                    <div class="lang-block">
+                        Romanian (native) · German (fluent) · English (fluent) ·
+                        French (basic)
+                    </div>
+                </div>
+            </section>
+
+            <section class="about-section fw-block" id="principles">
+                <header class="about-section-head">
+                    <h3>Principles</h3>
+                </header>
+                <ul
+                    class="principle-tags"
+                    style="
+                        list-style: none;
+                        padding: 0;
+                        margin: 4px 0 4px;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                    "
+                >
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.7px;
+                        "
+                    >
+                        Pragmatic &amp; outcome‑driven
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.7px;
+                        "
+                    >
+                        Explicit lineage
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.7px;
+                        "
+                    >
+                        Ergonomic DX
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.7px;
+                        "
+                    >
+                        Iterate &amp; measure
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.7px;
+                        "
+                    >
+                        Mentor &amp; share
+                    </li>
+                    <li
+                        style="
+                            background: #fff7f6;
+                            border: 1px solid #ffd9d3;
+                            padding: 6px 12px 5px;
+                            border-radius: 18px;
+                            font-size: 0.72em;
+                            font-weight: 600;
+                            letter-spacing: 0.7px;
+                        "
+                    >
+                        Cross‑disciplinary clarity
+                    </li>
+                </ul>
+            </section>
+
+            <section class="about-section fw-block" id="connect">
+                <header class="about-section-head">
+                    <h3>Connect</h3>
+                </header>
+                <div class="connect-grid" style="align-items: stretch">
+                    <div>
+                        <p style="margin-top: 0">
+                            Based in Frankfurt. Open to high‑impact product /
+                            platform / data infrastructure roles (remote /
+                            hybrid considered).
+                        </p>
+                        <div
+                            style="
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 10px;
+                                margin: 14px 0 18px;
+                            "
+                        >
+                            <a
+                                href="mailto:mircea@plosca.ru"
+                                style="
+                                    text-decoration: none;
+                                    background: #d64937;
+                                    color: #fff;
+                                    padding: 9px 18px 8px;
+                                    border-radius: 24px;
+                                    font-size: 0.75em;
+                                    letter-spacing: 1px;
+                                    font-weight: 600;
+                                "
+                                >Email</a
+                            >
+                            <a
+                                href="https://www.linkedin.com/in/mircea-ilie-ploscaru/"
+                                style="
+                                    text-decoration: none;
+                                    background: #fff7f6;
+                                    color: #b53a2b;
+                                    border: 1px solid #ffd9d3;
+                                    padding: 9px 18px 8px;
+                                    border-radius: 24px;
+                                    font-size: 0.75em;
+                                    letter-spacing: 1px;
+                                    font-weight: 600;
+                                "
+                                >LinkedIn</a
+                            >
+                            <a
+                                href="/resume.pdf"
+                                style="
+                                    text-decoration: none;
+                                    background: #ffffff;
+                                    color: #d64937;
+                                    border: 1px solid #d64937;
+                                    padding: 9px 18px 8px;
+                                    border-radius: 24px;
+                                    font-size: 0.75em;
+                                    letter-spacing: 1px;
+                                    font-weight: 600;
+                                "
+                                >Resume PDF</a
+                            >
+                        </div>
+                        <p style="margin: 0; font-size: 0.8em; color: #666">
+                            Prefer concise context in first contact (problem
+                            space, team size, stack, impact expectations).
+                        </p>
+                    </div>
+                    <div
+                        class="tooling-note"
+                        style="
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: space-between;
+                        "
+                    >
+                        <div>
+                            <strong>Tooling Ethos</strong>
+                            <p style="margin: 8px 0 10px">
+                                MacOS &amp; Arch Linux; reproducible dev shells;
+                                instrumentation &amp; tracing early; testable
+                                data contracts; CI as a guardrail not a gate.
+                            </p>
+                        </div>
+                        <ul
+                            style="
+                                list-style: none;
+                                padding: 0;
+                                margin: 0;
+                                font-size: 0.7em;
+                                letter-spacing: 0.5px;
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 6px;
+                            "
+                        >
+                            <li
+                                style="
+                                    background: #fff;
+                                    border: 1px solid #eee;
+                                    padding: 4px 8px 3px;
+                                    border-radius: 14px;
+                                "
+                            >
+                                Observability
+                            </li>
+                            <li
+                                style="
+                                    background: #fff;
+                                    border: 1px solid #eee;
+                                    padding: 4px 8px 3px;
+                                    border-radius: 14px;
+                                "
+                            >
+                                Data Quality
+                            </li>
+                            <li
+                                style="
+                                    background: #fff;
+                                    border: 1px solid #eee;
+                                    padding: 4px 8px 3px;
+                                    border-radius: 14px;
+                                "
+                            >
+                                Automation
+                            </li>
+                            <li
+                                style="
+                                    background: #fff;
+                                    border: 1px solid #eee;
+                                    padding: 4px 8px 3px;
+                                    border-radius: 14px;
+                                "
+                            >
+                                Resilience
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <p style="text-align: center; margin-top: 64px">
+                <a href="#top" class="up-btn" style="text-decoration: none"
+                    >↑</a
+                >
             </p>
-            <p>
-                🐧 Currently flirting with Machine Learning and Existential
-                Psychology.
-            </p>
-            <p>
-                🖋 I’ve also written some random
-                <a href="/prose">prose</a> in the past.
-            </p>
-            <p>
-                ☕ I love meeting new people. Currently I reside in Frankfurt if
-                you want to grab a coffee and talk.
-            </p>
-            <p>
-                💬 Feel free to get in touch by
-                <a href="mailto:mircea@plosca.ru">sending me an email</a> or
-                via
-                <a
-                    href="https://www.linkedin.com/in/mircea-ilie-ploscaru/"
-                    >linkedin</a
-                >.
-            </p>
-            <p><br /></p>
-            <!-- <div class="thingie" style="margin:auto;width:50%;"> -->
-            <!-- <div class="github-card" data-github="tzekid" data-width="320" data-height="120" data-theme="default"> -->
-            <!-- </div> -->
-            <!-- </div> -->
-            <script src="//phseiff.com/github-cards/widget.js"></script>
         </article>
     </body>
 </html>
