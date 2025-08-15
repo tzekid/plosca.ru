@@ -1,4 +1,4 @@
-module plosca
+module ploscaru
 
 go 1.25.0
 
