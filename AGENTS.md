@@ -7,10 +7,10 @@
 - `Dockerfile`, `docker-compose.yml`: Container build/run (service `ploscaru-web`).
 
 ## Build, Test, and Development Commands
-- `go run .`: Run locally (default port `9327`).
-  - Env: `PORT=9327 go run .`
-  - Flags: `go run . --port 9327` or `go run . -p 9327`
-- `go build .`: Build a local binary.
+- `go run ./cmd/nob run`: Run locally (defaults to `9327`).
+- `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`: Build with preset flags (edit defaults in `cmd/nob/main.go`).
+- Or direct: `go run .` and `go build .`.
+  - Flags: `PORT=9327 go run .`, `go run . --port 9327` or `-p 9327`.
   - Release-ish: `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
 - `go test ./...`: Run tests (none defined yet).
 - Docker: `docker compose up --build` then open `http://localhost:9327` (maps `9327:9327`, sets `PORT=9327`).

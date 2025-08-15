@@ -4,14 +4,17 @@ Tiny HTTP server that serves static files from `static_old` with simple path nor
 
 ### Run locally
 
+- Recommended (nob): `go run ./cmd/nob run` (defaults to `9327`)
 - Default: `go run .` (listens on `9327`)
 - Optional: `PORT=9327 go run .`
 - Flags: `go run . --port 9327` or `go run . -p 9327`
 
 ### Build
 
+- Recommended (nob): `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`
 - Debug: `go build .`
 - Release-ish: `CGO_ENABLED=0 go build -ldflags="-s -w" .`
+  - Adjust defaults in `cmd/nob/main.go` (`defaultLdflags`, `defaultGOOS`, `defaultGOARCH`, `defaultCGO`, `defaultOutput`).
 
 ### Docker
 
