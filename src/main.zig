@@ -8,17 +8,6 @@ const markdown_folder = "markdown";
 const public_folder = "public";
 const static_folder = "static_old";
 
-// fn cleanPublicFolder() !void {
-//     var dir = try fs.cwd().openDir(public_folder, .{ .iterate = true });
-//     defer dir.close();
-
-//     var iterator = dir.iterate();
-//     while (try iterator.next()) |entry| {
-//         if (std.mem.endsWith(u8, entry.name, ".html")) {
-//             try dir.deleteFile(entry.name);
-//         }
-//     }
-// }
 
 /// Render a parsed markdown root block to an output stream as HTML.
 /// The renderer allocates transient state with the markdown's allocator.
@@ -28,47 +17,6 @@ fn render(stream: anytype, md: zd.Block) !void {
     try h_renderer.renderBlock(md);
 }
 
-// fn compileMarkdownToHtml() !void {
-//     var dir = try fs.cwd().openDir(markdown_folder, .{ .iterate = true });
-//     defer dir.close();
-
-//     var iterator = dir.iterate();
-//     while (try iterator.next()) |entry| {
-//         if (std.mem.endsWith(u8, entry.name, ".md")) {
-//             const markdown_file_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}", .{ markdown_folder, entry.name });
-//             defer std.heap.page_allocator.free(markdown_file_path);
-
-//             const basename = std.fs.path.stem(entry.name);
-//             const html_file_path = try std.fmt.allocPrint(std.heap.page_allocator, "{s}/{s}.html", .{ public_folder, basename });
-//             defer std.heap.page_allocator.free(html_file_path);
-
-//             std.debug.print("Compiling '{s}'\n", .{html_file_path});
-
-//             var file = try dir.openFile(entry.name, .{});
-//             defer file.close();
-
-//             const file_contents = try file.readToEndAlloc(std.heap.page_allocator, std.math.maxInt(usize));
-//             defer std.heap.page_allocator.free(file_contents);
-
-//             const alloc = std.heap.page_allocator;
-//             const opts = zd.parser.ParserOpts{ .copy_input = false, .verbose = false };
-//             var parser = zd.Parser.init(alloc, opts);
-//             defer parser.deinit();
-
-//             try parser.parseMarkdown(file_contents);
-//             const md: zd.Block = parser.document;
-
-//             // TODO: omit <html> and <body> tags
-//             // TODO: wrap in <article> tag
-//             // TODO: figure out how to insert header and footer
-
-//             const dest_file = try fs.cwd().createFile(html_file_path, .{ .read = true });
-//             defer dest_file.close();
-
-//             try render(dest_file.writer(), md);
-//         }
-//     }
-// }
 
 /// zap request handler:
 /// - Normalizes the requested path into a file in STATIC_FOLDER.
