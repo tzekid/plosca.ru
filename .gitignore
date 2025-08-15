@@ -19,3 +19,5 @@ coverage/
 # Misc
 nginx.conf
 *.fiber.gz
+
+ploscaru
