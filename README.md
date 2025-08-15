@@ -15,8 +15,8 @@ Lightweight HTTP server that serves static files from `static_old`, with simple 
 
 ### Docker
 
-- `docker compose up --build` then open `http://localhost:3001`
-  - Compose maps `3001:3000` and sets `PORT=3000` inside the container.
+- `docker compose up --build` then open `http://localhost:9327`
+  - Compose maps `9327:9327` and sets `PORT=9327` inside the container.
 
 ### Notes
 

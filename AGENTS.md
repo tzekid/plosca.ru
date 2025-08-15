@@ -1,37 +1,36 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `src/main.zig`: Zap-based HTTP server. Serves files from `static_old`, normalizes paths, and 404s on missing files.
-- `static_old/`: Source of runtime HTML/CSS/assets (served directly).
-- `markdown/`: Content drafts in Markdown (pipeline currently disabled).
-- `public/`: Generated HTML experiments (not served by the app).
-- `build.zig`, `build.zig.zon`: Build graph and deps (`zap` enabled; TLS off). Markdown rendering is currently disabled; add `zigdown` later if needed.
-- `zig-out/`: Build artifacts.
+- `main.go`: Go Fiber HTTP server; serves files from `static_old/`, normalizes paths, and returns a minimal `templ` 404 page.
+- `static_old/`: Runtime HTML/CSS/assets served directly by Fiber.
+- `go.mod`, `go.sum`: Module name and dependencies.
+- `Dockerfile`, `docker-compose.yml`: Container build/run (service `ploscaru-web`).
 
 ## Build, Test, and Development Commands
-- `zig build`: Compile and install to `zig-out/bin/tzekid_website`.
-- `zig build run -- [args]`: Run locally; default port `9327`.
-  - Override: `PORT=3000 zig build run` or `zig build run -- --port 3000`.
-- `zig build -Doptimize=ReleaseFast`: Release build.
-- `zig build test`: Run Zig unit tests (none defined yet).
-- Docker: `docker compose up --build` and open `http://localhost:3001`.
-  - Compose maps `3001:3000` and sets `PORT=3000` in the container.
+- `go run .`: Run locally (default port `9327`).
+  - Env: `PORT=3000 go run .`
+  - Flags: `go run . --port 3000` or `go run . -p 3000`
+- `go build .`: Build a local binary.
+  - Release-ish: `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
+- `go test ./...`: Run tests (none defined yet).
+- Docker: `docker compose up --build` then open `http://localhost:9327` (maps `9327:9327`, sets `PORT=9327`).
 
 ## Coding Style & Naming Conventions
-- Zig formatting: `zig fmt src` (4-space indent, no tabs).
-- Files: `snake_case.zig` in `src/`; HTML/CSS with kebab-case filenames.
-- Prefer explicit types, descriptive `const` names, and small functions.
+- Format with `go fmt ./...`; vet with `go vet ./...`.
+- Filenames lowercase with underscores (e.g., `handlers.go`, `static_server.go`).
+- Exported identifiers: PascalCase; unexported: camelCase. Prefer explicit types and small, focused functions.
+- Keep HTTP logic minimal; static files live in `static_old/` and are served as-is.
 
 ## Testing Guidelines
-- Place `test` blocks near the code under test (in the same `.zig` file).
-- Name tests clearly, e.g., `test "path normalization" { ... }`.
-- Run with `zig build test`. No coverage tooling is configured.
+- Place `_test.go` files next to the code. Prefer table-driven tests.
+- Name tests by behavior, e.g., `TestResolveStaticFile`.
+- Run with `go test ./...`. Coverage is optional; no tooling configured.
 
 ## Commit & Pull Request Guidelines
-- Commits: Imperative subject (≤72 chars), optional scope (e.g., `feat:`, `build:`), and rationale in body. Reference issues (`Closes #123`).
-- PRs: Clear description, steps to verify (`zig build run`), linked issues, and screenshots for UI/HTML changes. Note port or Docker adjustments.
+- Commits: imperative subject (≤72 chars), optional scope (`feat:`, `build:`), and rationale; reference issues (e.g., `Closes #123`).
+- PRs: clear description, steps to verify (`go run .` or Docker), linked issues, and screenshots for UI/HTML changes. Note port or Docker changes.
 
-## Security & Configuration Tips (Optional)
-- TLS is disabled (`openssl = false`). Run behind Caddy/NGINX for TLS/HTTP2; on host, keep app on `9327` and let the proxy terminate TLS and forward.
-- Keep secrets out of `static_old`, `public`, and repo.
-- If enabling Markdown rendering, add `zigdown` as a dependency and review file path handling.
+## Security & Configuration Tips
+- App reads `PORT` (default `9327`); Docker exposes `9327` and maps `9327:9327` in compose.
+- Terminate TLS at a reverse proxy (Caddy/NGINX); keep this app HTTP-only.
+- Do not commit secrets; review path handling to avoid traversal (see `resolveStaticFile`).

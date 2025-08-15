@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --from=builder /bin/webapp /app/webapp
 COPY --from=builder /app/static_old /app/static_old
 
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=9327
+EXPOSE 9327
 
 ENTRYPOINT ["/app/webapp"]
