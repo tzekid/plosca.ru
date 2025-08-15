@@ -1,12 +1,12 @@
-## plosca.ru — Go Fiber + templ
+## plosca.ru — Go Fiber static server
 
-Lightweight HTTP server that serves static files from `static_old`, with simple path normalization and a minimal `templ`-based 404 page.
+Tiny HTTP server that serves static files from `static_old` with simple path normalization and an `.html` fallback (e.g., `/about` -> `static_old/about.html`).
 
 ### Run locally
 
 - Default: `go run .` (listens on `9327`)
-- Env override: `PORT=3000 go run .`
-- Flag override: `go run . --port 3000`
+- Optional: `PORT=9327 go run .`
+- Flags: `go run . --port 9327` or `go run . -p 9327`
 
 ### Build
 
@@ -16,8 +16,16 @@ Lightweight HTTP server that serves static files from `static_old`, with simple 
 ### Docker
 
 - `docker compose up --build` then open `http://localhost:9327`
-  - Compose maps `9327:9327` and sets `PORT=9327` inside the container.
+  - Compose maps `9327:9327` and sets `PORT=9327` in the container.
 
-### Notes
+### Add content
 
-- Only static file serving is enabled for now. `templ` is wired for the 404 page as a minimal baseline; dynamic pages can be added incrementally.
+- Put files in `static_old/` (e.g., `static_old/index.html`, `static_old/about.html`).
+- Access `/about` (no extension) or `/about.html` — both work.
+
+### Project structure
+
+- `main.go`: Fiber server — GET/HEAD only, static files.
+- `static_old/`: HTML/CSS/JS/assets served as-is.
+- `Dockerfile`, `docker-compose.yml`: Container build/run (port `9327`).
+- `go.mod`, `go.sum`: Go module and dependencies.

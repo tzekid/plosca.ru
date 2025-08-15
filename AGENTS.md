@@ -1,15 +1,15 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `main.go`: Go Fiber HTTP server; serves files from `static_old/`, normalizes paths, and returns a minimal `templ` 404 page.
+- `main.go`: Go Fiber HTTP server; serves files from `static_old/`, normalizes paths, and returns a simple static 404 if available.
 - `static_old/`: Runtime HTML/CSS/assets served directly by Fiber.
 - `go.mod`, `go.sum`: Module name and dependencies.
 - `Dockerfile`, `docker-compose.yml`: Container build/run (service `ploscaru-web`).
 
 ## Build, Test, and Development Commands
 - `go run .`: Run locally (default port `9327`).
-  - Env: `PORT=3000 go run .`
-  - Flags: `go run . --port 3000` or `go run . -p 3000`
+  - Env: `PORT=9327 go run .`
+  - Flags: `go run . --port 9327` or `go run . -p 9327`
 - `go build .`: Build a local binary.
   - Release-ish: `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
 - `go test ./...`: Run tests (none defined yet).
@@ -33,4 +33,4 @@
 ## Security & Configuration Tips
 - App reads `PORT` (default `9327`); Docker exposes `9327` and maps `9327:9327` in compose.
 - Terminate TLS at a reverse proxy (Caddy/NGINX); keep this app HTTP-only.
-- Do not commit secrets; review path handling to avoid traversal (see `resolveStaticFile`).
+- Do not commit secrets; review path handling to avoid traversal (see `safeFile`).
