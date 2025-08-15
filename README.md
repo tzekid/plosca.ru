@@ -1,15 +1,23 @@
-## Work in Progress
+## plosca.ru — Go Fiber + templ
 
-Currently overhauling my website.
+Lightweight HTTP server that serves static files from `static_old`, with simple path normalization and a minimal `templ`-based 404 page.
 
-TODOs:
+### Run locally
 
-- [x] simple file serving in zig's zap
-- [ ] templating for articles / pages (dynamic vs static generation?)
-- [ ] clean up CSS
-- [ ] overhaul "about me" page
-- [ ] write up experience of using zig & zap
+- Default: `go run .` (listens on `9327`)
+- Env override: `PORT=3000 go run .`
+- Flag override: `go run . --port 3000`
 
-## Tools needed:
+### Build
 
-- zig
+- Debug: `go build .`
+- Release-ish: `CGO_ENABLED=0 go build -ldflags="-s -w" .`
+
+### Docker
+
+- `docker compose up --build` then open `http://localhost:3001`
+  - Compose maps `3001:3000` and sets `PORT=3000` inside the container.
+
+### Notes
+
+- Only static file serving is enabled for now. `templ` is wired for the 404 page as a minimal baseline; dynamic pages can be added incrementally.
