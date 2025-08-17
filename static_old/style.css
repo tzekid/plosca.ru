@@ -1440,6 +1440,7 @@ code span.wa {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 32px;
     margin-top: 8px;
+    padding-bottom: 8px;
 }
 
 .competency-col {
