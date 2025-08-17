@@ -1,36 +1,85 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
-- `main.go`: Go Fiber HTTP server; serves files from `static_old/`, normalizes paths, and returns a simple static 404 if available.
-- `static_old/`: Runtime HTML/CSS/assets served directly by Fiber.
-- `go.mod`, `go.sum`: Module name and dependencies.
-- `Dockerfile`, `docker-compose.yml`: Container build/run (service `ploscaru-web`).
+These guidelines describe structure, runtime modes (embedded vs disk), coding conventions, middleware, security posture, and contribution workflow for the plosca.ru static site server.
 
-## Build, Test, and Development Commands
-- `go run ./cmd/nob run`: Run locally (defaults to `9327`).
-- `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`: Build with preset flags (edit defaults in `cmd/nob/main.go`).
-- Or direct: `go run .` and `go build .`.
-  - Flags: `PORT=9327 go run .`, `go run . --port 9327` or `-p 9327`.
-  - Release-ish: `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
-- `go test ./...`: Run tests (none defined yet).
-- Docker: `docker compose up --build` then open `http://localhost:9327` (maps `9327:9327`, sets `PORT=9327`).
+## Overview
 
-## Coding Style & Naming Conventions
-- Format with `go fmt ./...`; vet with `go vet ./...`.
-- Filenames lowercase with underscores (e.g., `handlers.go`, `static_server.go`).
-- Exported identifiers: PascalCase; unexported: camelCase. Prefer explicit types and small, focused functions.
-- Keep HTTP logic minimal; static files live in `static_old/` and are served as-is.
+The binary is a minimal Go Fiber application that serves static assets under `static_old/`.
 
-## Testing Guidelines
-- Place `_test.go` files next to the code. Prefer table-driven tests.
-- Name tests by behavior, e.g., `TestResolveStaticFile`.
-- Run with `go test ./...`. Coverage is optional; no tooling configured.
+Key characteristics:
+- Single-binary by default via Go `embed` (no external runtime asset directory needed).
+- Optional disk mode (`--use-disk`) for live iteration without rebuild.
+- Extensionless path resolution with `.html` and `index.html` fallbacks.
+- GET and HEAD only; other HTTP methods yield 405.
+- Lightweight but defense-in-depth: path sanitation, traversal prevention, security headers.
 
-## Commit & Pull Request Guidelines
-- Commits: imperative subject (≤72 chars), optional scope (`feat:`, `build:`), and rationale; reference issues (e.g., `Closes #123`).
-- PRs: clear description, steps to verify (`go run .` or Docker), linked issues, and screenshots for UI/HTML changes. Note port or Docker changes.
+## Runtime Modes
 
-## Security & Configuration Tips
-- App reads `PORT` (default `9327`); Docker exposes `9327` and maps `9327:9327` in compose.
-- Terminate TLS at a reverse proxy (Caddy/NGINX); keep this app HTTP-only.
-- Do not commit secrets; review path handling to avoid traversal (see `safeFile`).
+There are two mutually exclusive modes selected at process start:
+
+1. Embedded Mode (default)
+   - Assets compiled into the binary with `//go:embed static_old/*`.
+   - Immutable at runtime; reproducible deployments.
+   - Lowest operational complexity (only ship the binary).
+
+2. Disk Mode (`--use-disk`)
+   - Serves from the on-disk `static_old/` directory.
+   - Supports editing assets without recompilation (development convenience).
+   - Traversal mitigated by `safeFile` (absolute prefix check).
+
+Mode Selection Logic:
+- If `--use-disk` provided -> Disk Mode.
+- Else attempt `fs.Sub(embeddedFiles, "static_old")` -> if successful -> Embedded Mode.
+- If embed sub-FS creation fails (unexpected) -> fallback to Disk Mode with a warning.
+
+## Project Structure
+
+- `main.go`          : Server (embedding, path resolution, middleware, graceful shutdown).
+- `static_old/`      : Static assets (HTML, CSS, JS, images).
+- `cmd/nob/`         : Helper build/run command with preset flags.
+- `Dockerfile`       : Container build definition.
+- `docker-compose.yml`: Local composition (maps port 9327, sets `PORT`).
+- `go.mod`, `go.sum` : Module metadata and dependency checksums.
+- `README.md`        : User-facing overview and usage.
+- `AGENTS.md`        : This guideline document.
+
+## Build, Run, and Ports
+
+Port resolution precedence:
+1. `--port` flag
+2. `-p` short flag
+3. `PORT` environment variable
+4. Default `9327`
+
+Commands:
+- Run (embedded): `go run .`
+- Run (disk): `go run . --use-disk`
+- Run with helper: `go run ./cmd/nob run`
+- Build debug: `go build .`
+- Build release-ish: `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
+- Helper build: `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`
+- Docker: `docker compose up --build`
+
+
+## Roadmap / TODO
+
+Implemented:
+- [x] Compression
+- [x] Logging
+- [x] Graceful shutdown
+- [x] Embedded asset mode
+- [x] ETag middleware
+- [x] Path traversal safeguards
+- [x] Extensionless + index resolution
+
+Planned / Consider:
+- [ ] Last-Modified & Cache-Control enhancements (immutable asset strategy)
+- [ ] Richer MIME detection (`net/http.DetectContentType`)
+- [ ] Prometheus metrics (request count, latency histogram, status classes)
+- [ ] Automated tests (resolution, traversal, HEAD, 404)
+- [ ] Recursive embedding if deeper directory hierarchy introduced
+- [ ] Configurable CSP via env or flag
+- [ ] Symlink handling policy clarity (`EvalSymlinks`)
+- [ ] CI pipeline (lint, vet, test, build)
+- [ ] Pre-compressed asset serving (.br, .gz)
+- [ ] Optional directory listing JSON or sitemap generator

@@ -1,65 +1,149 @@
-// plosca.ru — tiny static site server
-//
-// This app serves files from the local "static_old" directory using Fiber.
-// It keeps behavior beginner-friendly:
-//   - Requests without an extension map to the same path with ".html" appended
-//     (e.g., GET /about -> static_old/about.html).
-//   - GET and HEAD are supported; everything else returns 405.
-//   - 404s return static_old/404.html if present, otherwise a plain 404 status.
-//
-// Run: `go run .` (default port 9327) or `PORT=9327 go run .`.
-// Docker: `docker compose up --build` then open http://localhost:9327
+// src/main.go
+// plosca.ru — tiny static site server (enhanced)
+// - Serves from embedded static_old (go:embed) by default, or from disk with --use-disk
+// - Extensionless paths try .html and index.html
+// - GET and HEAD supported; other methods -> 405
+// - Middleware: recover, logger, compress, etag
+// - Security headers, graceful shutdown
+// Run: `go run .` (default port 9327) or `PORT=9327 go run .`
+// Flags override environment variables.
 package main
 
 import (
+	"context"
+	"embed"
 	"flag"
+	"io/fs"
 	"log"
+	"mime"
 	"net"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/etag"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 const staticFolder = "static_old"
 
-func main() {
-	port := resolvePort()
+//go:embed static_old/*
+var embeddedFiles embed.FS
 
-	// Minimal Fiber instance; server header is just for easy identification.
+func main() {
+	// Flags (flags override env)
+	var (
+		portFlag int
+		short    int
+		useDisk  bool
+	)
+	flag.IntVar(&portFlag, "port", 0, "Port to listen on")
+	flag.IntVar(&short, "p", 0, "Port to listen on (short)")
+	flag.BoolVar(&useDisk, "use-disk", false, "Serve files from disk (static_old) instead of embedded assets")
+	flag.Parse()
+
+	port := resolvePort(portFlag, short)
+
+	// Prepare FS: prefer embed unless --use-disk is set or embed isn't available.
+	var (
+		useEmbedded bool
+		efs         fs.FS
+	)
+	if !useDisk {
+		sub, err := fs.Sub(embeddedFiles, staticFolder)
+		if err == nil {
+			useEmbedded = true
+			efs = sub
+		} else {
+			log.Printf("embedded assets not available: %v — falling back to disk", err)
+			useEmbedded = false
+		}
+	} else {
+		useEmbedded = false
+	}
+
+	// If using disk, ensure directory exists (warn if not).
+	if !useEmbedded {
+		if _, err := os.Stat(staticFolder); os.IsNotExist(err) {
+			log.Printf("warning: %s not found on disk and --use-disk used; server will return 404s", staticFolder)
+		}
+	}
+
+	// Fiber app with middleware
 	app := fiber.New(fiber.Config{
-		ServerHeader:          "ploscaru",
-		DisableStartupMessage: false,
+		ServerHeader: "ploscaru",
 	})
 
-	// Core handler used by both GET and HEAD.
-	// - Cleans the request path
-	// - Tries the exact file, then ".html" if no extension is present
-	// - Falls back to 404.html or a plain 404
+	// Middleware stack
+	app.Use(recover.New())
+	app.Use(logger.New(logger.Config{
+		Format:     "${time} - ${ip} ${method} ${path} ${status} - ${latency}\n",
+		TimeFormat: "2006-01-02 15:04:05",
+		TimeZone:   "Local",
+	}))
+	app.Use(compress.New())
+	app.Use(etag.New())
+
+	// Security headers
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("Referrer-Policy", "no-referrer-when-downgrade")
+		c.Set("Permissions-Policy", "geolocation=()")
+		c.Set("Cross-Origin-Opener-Policy", "same-origin")
+		c.Set("Cross-Origin-Resource-Policy", "same-origin")
+		// conservative CSP for static sites; tweak if you embed third-party resources
+		c.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'")
+		return c.Next()
+	})
+
+	// Core handler used for GET and HEAD
 	h := func(c *fiber.Ctx) error {
+		// Normalize path using path (URL-style)
 		p := strings.TrimSpace(c.Path())
 		if p == "" || p == "/" {
 			p = "/index.html"
 		} else {
-			// Ensure a clean, absolute-style path for consistent joining below.
-			p = path.Clean("/" + p)
+			p = path.Clean("/" + p) // keeps it URL-style
 		}
 		rel := strings.TrimPrefix(p, "/")
-		// Candidate files to try in order.
-		try := []string{filepath.Join(staticFolder, rel)}
-		if !strings.ContainsRune(filepath.Base(rel), '.') {
-			try = append(try, filepath.Join(staticFolder, rel+".html"))
+
+		// Candidates: exact, +.html, +/index.html (for directories)
+		try := []string{rel}
+		if !strings.ContainsRune(path.Base(rel), '.') {
+			try = append(try, rel+".html")
+			try = append(try, path.Join(rel, "index.html"))
 		}
-		for _, full := range try {
+
+		if useEmbedded {
+			for _, candidate := range try {
+				if existsInEmbed(efs, candidate) {
+					return sendEmbedded(c, efs, candidate)
+				}
+			}
+			// 404.html fallback
+			if existsInEmbed(efs, "404.html") {
+				_ = c.Status(fiber.StatusNotFound)
+				return sendEmbedded(c, efs, "404.html")
+			}
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+
+		// Disk-backed FS flow
+		for _, candidate := range try {
+			full := filepath.Join(staticFolder, filepath.FromSlash(candidate))
 			if safeFile(staticFolder, full) {
+				// Fiber will omit body for HEAD automatically while letting handler run.
 				return c.SendFile(full, true)
 			}
 		}
-
-		// 404: serve static 404.html if present; else plain status.
 		notFound := filepath.Join(staticFolder, "404.html")
 		if safeFile(staticFolder, notFound) {
 			return c.Status(fiber.StatusNotFound).SendFile(notFound, true)
@@ -67,46 +151,66 @@ func main() {
 		return c.SendStatus(fiber.StatusNotFound)
 	}
 
-	// Only serve static content for GET/HEAD. Other methods return 405 by default.
+	// Only serve for GET and HEAD
 	app.Get("/*", h)
 	app.Head("/*", h)
 
-	// Listen on all interfaces for container/VM friendliness.
+	// Start server with graceful shutdown
 	addr := net.JoinHostPort("0.0.0.0", strconv.Itoa(port))
 	abs, _ := filepath.Abs(".")
-	log.Printf("Serving %s from %s on %s\n", staticFolder, abs, addr)
-	if err := app.Listen(addr); err != nil {
-		log.Fatal(err)
+	log.Printf("Serving %s (embedded=%v) from %s on %s\n", staticFolder, useEmbedded, abs, addr)
+
+	// Run server
+	serverErrCh := make(chan error, 1)
+	go func() {
+		if err := app.Listen(addr); err != nil {
+			// When Shutdown is called, Listen returns an error; only log if unexpected.
+			serverErrCh <- err
+		}
+	}()
+
+	// Wait for signal
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case sig := <-stop:
+		log.Printf("signal received: %v — shutting down", sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := app.Shutdown(); err != nil {
+			log.Printf("graceful shutdown error: %v", err)
+		}
+		// allow a short window to observe Listen error if any
+		select {
+		case e := <-serverErrCh:
+			if e != nil && !strings.Contains(e.Error(), "server closed") {
+				log.Printf("server error: %v", e)
+			}
+		case <-ctx.Done():
+		}
+	case e := <-serverErrCh:
+		log.Fatalf("server error: %v", e)
 	}
 }
 
-// resolvePort determines the HTTP port.
-// Order of precedence:
-// 1) PORT environment variable
-// 2) --port / -p command-line flags
-// 3) default 9327
-func resolvePort() int {
+// resolvePort: flags first (portFlag / -p), then PORT env, then default 9327
+func resolvePort(portFlag, short int) int {
 	const def = 9327
-	if v, ok := os.LookupEnv("PORT"); ok {
-		if p, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && p > 0 && p < 65536 {
-			return p
-		}
-	}
-	var portFlag, short int
-	flag.IntVar(&portFlag, "port", 0, "Port to listen on")
-	flag.IntVar(&short, "p", 0, "Port to listen on (short)")
-	flag.Parse()
 	if portFlag > 0 && portFlag < 65536 {
 		return portFlag
 	}
 	if short > 0 && short < 65536 {
 		return short
 	}
+	if v, ok := os.LookupEnv("PORT"); ok {
+		if p, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && p > 0 && p < 65536 {
+			return p
+		}
+	}
 	return def
 }
 
-// safeFile returns true if target exists, is a file, and lives under base.
-// This prevents directory traversal from escaping the static folder.
+// safeFile ensures target exists, is a file, and is inside base (prevents directory traversal).
 func safeFile(base, target string) bool {
 	fi, err := os.Stat(target)
 	if err != nil || fi.IsDir() {
@@ -122,4 +226,76 @@ func safeFile(base, target string) bool {
 	}
 	sep := string(filepath.Separator)
 	return strings.HasPrefix(targetAbs, baseAbs+sep)
+}
+
+// existsInEmbed checks whether a relative path exists in the embedded FS and is a file.
+func existsInEmbed(efs fs.FS, rel string) bool {
+	ri := path.Clean("/" + rel)
+	ri = strings.TrimPrefix(ri, "/")
+	info, err := fs.Stat(efs, ri)
+	if err != nil {
+		return false
+	}
+	// reject directories
+	return !info.IsDir()
+}
+
+// sendEmbedded streams a file from the embedded FS to the client.
+func sendEmbedded(c *fiber.Ctx, efs fs.FS, rel string) error {
+	rel = path.Clean("/" + rel)
+	rel = strings.TrimPrefix(rel, "/")
+	f, err := efs.Open(rel)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	// Set Content-Type by extension when possible.
+	ext := filepath.Ext(rel)
+	if ext != "" {
+		if mt := mime.TypeByExtension(ext); mt != "" {
+			c.Set("Content-Type", mt)
+		}
+	} else {
+		// fallback content sniffing for blob/no-ext files:
+		var buf [512]byte
+		n, _ := f.Read(buf[:])
+		if n > 0 {
+			if sniff := httpDetectContentType(buf[:n]); sniff != "" {
+				c.Set("Content-Type", sniff)
+			}
+		}
+		// rewind reader: reopen (embedded files are cheap to open)
+		_ = f.Close()
+		f, err = efs.Open(rel)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+	}
+
+	// Use SendStream with known size
+	if size := info.Size(); size >= 0 {
+		return c.SendStream(f, int(size))
+	}
+	// fallback unknown size
+	return c.SendStream(f, -1)
+}
+
+// httpDetectContentType is a tiny wrapper to avoid importing net/http only for DetectContentType.
+func httpDetectContentType(b []byte) string {
+	// minimal reimplementation: use mime by extension if possible, otherwise basic sniff.
+	// This is intentionally tiny: if you need robust sniffing, import net/http.DetectContentType.
+	// Let's use a quick heuristic by checking for HTML tags:
+	s := strings.TrimLeft(string(b), "\n\r\t ")
+	if strings.HasPrefix(s, "<!doctype html") || strings.HasPrefix(s, "<html") {
+		return "text/html; charset=utf-8"
+	}
+	// fallback to octet-stream
+	return "application/octet-stream"
 }
