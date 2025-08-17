@@ -99,8 +99,19 @@ func main() {
 		c.Set("Permissions-Policy", "geolocation=()")
 		c.Set("Cross-Origin-Opener-Policy", "same-origin")
 		c.Set("Cross-Origin-Resource-Policy", "same-origin")
-		// conservative CSP for static sites; tweak if you embed third-party resources
-		c.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'")
+		// tightened CSP (self-hosted only, no inline styles/scripts, explicit font & other hardening)
+		c.Set("Content-Security-Policy", ""+
+			"default-src 'self'; "+
+			"img-src 'self' data:; "+
+			"style-src 'self'; "+
+			"font-src 'self'; "+
+			"script-src 'self'; "+
+			"object-src 'none'; "+
+			"base-uri 'self'; "+
+			"frame-ancestors 'none'; "+
+			"manifest-src 'self'; "+
+			"form-action 'self'; "+
+			"upgrade-insecure-requests")
 		return c.Next()
 	})
 
@@ -140,6 +151,11 @@ func main() {
 		for _, candidate := range try {
 			full := filepath.Join(staticFolder, filepath.FromSlash(candidate))
 			if safeFile(staticFolder, full) {
+				ext := strings.ToLower(filepath.Ext(full))
+				if ext == ".woff2" || ext == ".woff" {
+					// 1 year immutable caching for versioned font files
+					c.Set("Cache-Control", "public, max-age=31536000, immutable")
+				}
 				// Fiber will omit body for HEAD automatically while letting handler run.
 				return c.SendFile(full, true)
 			}
@@ -277,6 +293,11 @@ func sendEmbedded(c *fiber.Ctx, efs fs.FS, rel string) error {
 			return err
 		}
 		defer f.Close()
+	}
+	// Long-term caching for fonts (self-hosted)
+	loExt := strings.ToLower(ext)
+	if loExt == ".woff2" || loExt == ".woff" {
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
 	}
 
 	// Use SendStream with known size
