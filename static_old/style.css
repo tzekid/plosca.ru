@@ -659,6 +659,7 @@ body {
     margin-bottom: -18px;
     font-size: 128px;
     color: #d64937;
+    text-align: center;
 }
 .home-box h1 span {
     opacity: 0.75;
