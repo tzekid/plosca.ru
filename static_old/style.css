@@ -1351,7 +1351,8 @@ code span.wa {
 /* Full-width About Sections (stacked layout) */
 .about-section {
     /* padding: 72px 0 64px; */
-    padding: 0px 0 64px;
+    /* padding: 0px 0 64px; */
+    padding: 0px 0 0px;
     position: relative;
     background: #ffffff;
 }
