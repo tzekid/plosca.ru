@@ -29,6 +29,214 @@
 }
 
 /* @import url("//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"); */
+/* Appended: extracted page-specific styles moved from inline <style> blocks */
+
+/* About page container (moved from about.html inline styles) */
+article.about-page {
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 32px;
+    box-sizing: border-box;
+}
+
+/* About hero + heading */
+.about-hero {
+    text-align: center;
+    margin: 16px auto 40px;
+    padding: 0 8px;
+}
+.about-hero h2 {
+    margin: 0;
+    font-size: 2.6em;
+    line-height: 1.05;
+}
+
+/* Tagline */
+.about-tagline {
+    font-size: 1.05em;
+    line-height: 1.4;
+    font-weight: 500;
+    color: #555;
+    max-width: 700px;
+    margin: 10px auto 0;
+    text-align: center;
+}
+
+/* Pill badges (At a Glance + key skills) */
+.pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+}
+.pill-list li {
+    background: #fff7f6;
+    border: 1px solid #ffd9d3;
+    color: #b53a2b;
+    padding: 6px 12px 5px;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    border-radius: 24px;
+    text-transform: uppercase;
+    white-space: normal;
+}
+
+/* Fact badges */
+.fact-badges .fact {
+    background: #fff7f6;
+    border: 1px solid #ffe3dd;
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+}
+
+/* Experience typography tweaks */
+.exp-bullets {
+    list-style: disc;
+    margin-left: 1.25em;
+}
+.exp-title {
+    font-weight: 600;
+}
+.exp-dates,
+.exp-company {
+    font-size: 0.75em;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+/* Language block size adjustment */
+.lang-block {
+    font-size: 0.8em;
+}
+
+/* Header CTA button grouping (if needed globally) */
+.header-cta {
+    text-align: center;
+}
+.header-cta a {
+    display: inline-block;
+    background: #d64937;
+    color: #fff;
+    padding: 10px 22px 9px;
+    border-radius: 28px;
+    font-size: 0.8em;
+    letter-spacing: 1px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 4px 10px -4px rgba(214, 73, 55, 0.45);
+}
+
+/* Responsive tweaks formerly inline in about.html */
+@media (max-width: 640px) {
+    article.about-page {
+        padding: 0 18px;
+    }
+    .about-hero h2 {
+        font-size: 2.05em;
+    }
+    .about-tagline {
+        font-size: 0.95em;
+    }
+    .pill-list li,
+    .fact-badges .fact {
+        font-size: 0.64em;
+        padding: 5px 10px 4px;
+    }
+    .exp-bullets {
+        font-size: 0.82em;
+    }
+    .exp-title {
+        font-size: 0.9em;
+    }
+    .exp-dates,
+    .exp-company {
+        font-size: 0.58em;
+    }
+    .lang-block {
+        font-size: 0.66em;
+    }
+}
+
+/* Utility & extracted button / layout classes from about.html */
+.mt-4 {
+    margin-top: 4px;
+}
+.mt-64 {
+    margin-top: 64px;
+}
+.center {
+    text-align: center;
+}
+.pill-neutral {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    color: #666;
+    padding: 6px 12px 5px;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    border-radius: 24px;
+    text-transform: uppercase;
+}
+.connect-grid.stretch {
+    align-items: stretch;
+}
+.no-top-margin {
+    margin-top: 0;
+}
+.cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 18px;
+}
+.btn-primary,
+.btn-secondary,
+.btn-outline {
+    text-decoration: none;
+    padding: 9px 18px 8px;
+    border-radius: 24px;
+    font-size: 0.75em;
+    letter-spacing: 1px;
+    font-weight: 600;
+    display: inline-block;
+}
+.btn-primary {
+    background: #d64937;
+    color: #fff;
+    box-shadow: 0 4px 10px -4px rgba(214, 73, 55, 0.45);
+    border: none;
+}
+.btn-secondary {
+    background: #fff7f6;
+    color: #b53a2b;
+    border: 1px solid #ffd9d3;
+}
+.btn-outline {
+    background: #ffffff;
+    color: #d64937;
+    border: 1px solid #d64937;
+}
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-outline:hover {
+    filter: brightness(1.05);
+}
+.author {
+    margin-top: 10px;
+    margin-bottom: 22px;
+    font-size: 1.05em;
+    font-weight: 600;
+}
+
 * {
     -webkit-tap-highlight-color: transparent;
 }
