@@ -103,7 +103,7 @@ func main() {
 		c.Set("Content-Security-Policy", ""+
 			"default-src 'self'; "+
 			"img-src 'self' data:; "+
-			"style-src 'self'; "+
+			"style-src 'self' 'unsafe-inline'; "+
 			"font-src 'self'; "+
 			"script-src 'self'; "+
 			"object-src 'none'; "+
