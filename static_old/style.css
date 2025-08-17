@@ -1767,6 +1767,8 @@ code span.wa {
 
 .exp-role {
     position: relative;
+    padding-left: 8px;
+    padding-top: 4px;
 }
 
 .exp-role:before {
