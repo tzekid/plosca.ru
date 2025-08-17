@@ -2,6 +2,7 @@
     font-family: "Quando";
     font-style: normal;
     font-weight: 400;
+    font-display: swap;
     src:
         local("Quando-Regular"),
         /* url(https://fonts.gstatic.com/s/quando/v5/PH1InQe0rvp_yN3TzIuyyQ.woff2)
@@ -16,6 +17,7 @@
     font-family: "Quicksand";
     font-style: normal;
     font-weight: 400;
+    font-display: swap;
     src:
         local("Quicksand Regular"),
         local("Quicksand-Regular"),
