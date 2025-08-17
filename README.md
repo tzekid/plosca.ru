@@ -16,29 +16,6 @@ A minimal HTTP server that serves static files from `static_old/` with smart pat
 - Graceful shutdown on SIGINT/SIGTERM.
 - Simple, safe file handling (`safeFile` guards traversal).
 
-### How It Works
-
-1. At build time, all `static_old/*` files are embedded.
-2. On startup:
-   - If `--use-disk` is NOT provided, the server attempts to serve from the embedded filesystem.
-   - If `--use-disk` is provided (or embedding unexpectedly fails) it serves directly from the on-disk `static_old/` directory.
-3. For each request:
-   - The path is normalized (leading slash ensured, cleaned).
-   - A candidate list is built: exact, plus `.html`, plus `index.html` under the same path if no extension was present.
-   - The first candidate that exists is served.
-   - If none match, a `404.html` (if present) is served with 404; otherwise a plain 404 status.
-
-Embedded mode is immutable at runtime; disk mode lets you tweak files without rebuilding.
-
-### Path Examples
-
-Request -> Resolution attempts (in order):
-- `/` → `index.html`
-- `/about` → `about`, `about.html`, `about/index.html`
-- `/blog/2024/entry` → `blog/2024/entry`, `blog/2024/entry.html`, `blog/2024/entry/index.html`
-
-(Only the first existing non-directory file is returned.)
-
 ### Run Locally
 
 Fast path:
@@ -86,34 +63,6 @@ Then visit: http://localhost:9327
 
 Compose maps `9327:9327` and sets `PORT=9327`.
 
-### Development: Embedded vs Disk Mode
-
-- Default (embedded): reproducible single artifact; changes to files require rebuild.
-- Disk mode (`--use-disk`): ideal for iterative frontend edits; skip rebuilds.
-- To regenerate embedded assets, rebuild the binary.
-
-### Middleware Stack
-
-Order (as configured):
-1. Recover (panic safety)
-2. Logger (time / ip / method / path / status / latency)
-3. Compression (Content-Encoding negotiation)
-4. ETag (basic caching hint)
-5. Security headers (CSP, COOP, CORP, etc.)
-6. Static resolution handler (GET/HEAD)
-
-### Security Notes
-
-- `safeFile` prevents directory traversal when serving from disk (absolute path prefix check).
-- Embedded mode inherently restricts to known-at-build files.
-- CSP is conservative; expand if you need external scripts or styles.
-- TLS termination should occur at an upstream reverse proxy (Caddy, NGINX, etc.).
-- No secrets should live in `static_old/`.
-
-### Custom 404
-
-Place a `static_old/404.html` to control not-found responses. If omitted, a bare 404 is returned.
-
 ### Project Structure
 
 - `main.go` — server logic (embedding, middleware, graceful shutdown).
@@ -122,25 +71,6 @@ Place a `static_old/404.html` to control not-found responses. If omitted, a bare
 - `Dockerfile`, `docker-compose.yml` — container tooling.
 - `go.mod`, `go.sum` — module metadata.
 - `README.md`, `AGENTS.md` — docs and guidelines.
-
-### HEAD Support
-
-Routes are explicitly registered for GET and HEAD. Fiber suppresses the body automatically for HEAD while still letting handlers set headers (content type, ETag, etc.).
-
-### MIME Handling
-
-- If a file has an extension, `mime.TypeByExtension` sets `Content-Type`.
-- If no extension, a small heuristic attempts to classify HTML; otherwise defaults to `application/octet-stream`.
-- (Future improvement: use `net/http.DetectContentType` for richer detection, especially for binary or SVG files without extensions.)
-
-### Extending
-
-Possible enhancements:
-- Add cache-control strategies (e.g., hash-based immutable filenames).
-- Pre-compress and serve `.br` / `.gz` variants.
-- Add metrics (Prometheus).
-- Implement directory-level redirect rules or sitemap generation.
-- Add tests for path resolution and security invariants.
 
 ### Current TODO / Roadmap
 
@@ -157,17 +87,10 @@ Implemented:
 Still planned / optional:
 - [ ] Add Last-Modified / stronger cache headers
 - [ ] Switch to `net/http.DetectContentType` for richer sniffing
-- [ ] Add Prometheus metrics (status counts, latency histograms)
+- [ ] Add (Prometheus) metrics (status counts, latency histograms)
 - [ ] Add automated tests (path traversal, candidate resolution, 404 fallback, HEAD behavior)
 - [ ] Support recursive embed pattern if deeper subdirectories are added
 - [ ] Optional directory-level index JSON or sitemap generator
 - [ ] Configurable CSP (env or flag)
 - [ ] Symlink policy review (replace with `EvalSymlinks` if needed in disk mode)
 - [ ] Add CI workflow (lint + build + test)
-
-### Quick Start Summary
-
-1. Put `index.html` into `static_old/`.
-2. Run `go run .`
-3. Open the port shown in logs (default 9327).
-4. Add more pages (e.g., `about.html`) and access `/about`.
