@@ -23,18 +23,42 @@ import (
 
 // Default knobs — adjust as you like
 var (
-	defaultPort    = 9327
-	defaultOutput  = "webapp"
-	defaultLdflags = "-s -w"
-	defaultGOOS    = runtime.GOOS
-	defaultGOARCH  = runtime.GOARCH
-	defaultCGO     = "0" // "0" or "1"
+	defaultPort    = 9327                     // Default port to forward via PORT env
+	defaultOutput  = "webapp"                 // Default output binary name
+	defaultLdflags = "-s -w"                  // "-s -w" for smaller binary size
+	defaultGOOS    = runtime.GOOS             // "linux", "darwin", "windows", etc.
+	defaultGOARCH  = runtime.GOARCH           // "amd64", "arm64", etc.
+	defaultCGO     = "0"                      // "0" or "1"
+	defaultService = "tzekid_website.service" // default systemd service to restart
 )
 
 func main() {
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(2)
+	}
+
+	// Global flags: --pull-build-restart (-pbr) with optional --service/-s
+	service := defaultService
+	for i := 1; i < len(os.Args); i++ {
+		a := os.Args[i]
+		if a == "--service" || a == "-s" {
+			if i+1 < len(os.Args) {
+				service = os.Args[i+1]
+				i++
+				continue
+			}
+		}
+		if v, ok := strings.CutPrefix(a, "--service="); ok {
+			service = v
+		}
+		if v, ok := strings.CutPrefix(a, "-s="); ok {
+			service = v
+		}
+		if a == "--pull-build-restart" || a == "-pbr" {
+			nobPullBuildRestart(service)
+			return
+		}
 	}
 
 	cmd := os.Args[1]
@@ -70,9 +94,14 @@ Commands
   run   : run the app with PORT env
   build : compile the app with preset flags
 
+Global flags
+  --pull-build-restart, -pbr   : git pull, build (same as 'nob build'), then sudo systemctl restart SERVICE
+  --service, -s SERVICE        : systemd service name (default: tzekid_website.service)
+
 Examples
   go run ./cmd/nob run --port 9327
   go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp
+  go run ./cmd/nob --pull-build-restart --service myapp.service
 
 `)
 }
@@ -116,6 +145,32 @@ func nobBuild(output, ldflags, goos, goarch, cgo string) {
 
 	// Optional: stamp build time
 	fmt.Printf("[nob] built %s at %s\n", output, time.Now().Format(time.RFC3339))
+}
+
+func nobPullBuildRestart(service string) {
+	fmt.Println("[nob] git pull")
+	cmd := exec.Command("git", "pull")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		os.Exit(exitCode(err))
+	}
+
+	// Build with default settings (equivalent to: go run ./cmd/nob build)
+	nobBuild(defaultOutput, defaultLdflags, defaultGOOS, defaultGOARCH, defaultCGO)
+
+	// Restart systemd service
+	fmt.Printf("[nob] restarting systemd service: %s\n", service)
+	cmd = exec.Command("sudo", "systemctl", "restart", service)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		os.Exit(exitCode(err))
+	}
+
+	fmt.Println("[nob] pull-build-restart completed")
 }
 
 func exitCode(err error) int {
