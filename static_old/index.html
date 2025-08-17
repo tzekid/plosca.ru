@@ -33,9 +33,9 @@
         /* Basic nav so layout doesn't jump before full CSS loads */
         .nav{padding:8px}.logo{float:left;padding:8px;margin-left:32px;margin-top:2px}.logo a{color:#d64937;font-family:"Quando";font-weight:700;font-size:24px;letter-spacing:1px}
     </style>
-    <!-- Defer full stylesheet: rel=preload + onload swap (keeps non-blocking). -->
-    <link rel="preload" href="/style.css" as="style" onload="this.rel='stylesheet'" />
-    <noscript><link rel="stylesheet" href="/style.css" /></noscript>
+    <!-- Load full stylesheet normally (previous async swap blocked by CSP inline handler). -->
+    <link rel="preload" href="/style.css" as="style" />
+    <link rel="stylesheet" href="/style.css" />
 </head>
 
 <body>
