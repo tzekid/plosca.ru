@@ -1442,6 +1442,10 @@ code span.wa {
     margin-top: 8px;
 }
 
+.competency-col {
+    padding: 8px;
+}
+
 .competency-col h3 {
     padding-top: 0;
     margin-top: 0;
