@@ -243,6 +243,12 @@ article.about-page {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Explicit base heading sizing inside sectioning content to satisfy upcoming UA changes */
+article h1, section h1, main h1, aside h1, nav h1 {
+    font-size: 2.5rem; /* fallback base for nested h1 */
+    line-height: 1.1;
+}
+
 /****************************************************************************/
 /**** VERY AWESOME PANDOC.CSS STYLES !CHECK ON IT IF SOMETHING FAILS ****/
 blockquote {
@@ -664,8 +670,6 @@ body {
     margin: 0 0;
     padding: 0 0;
     font-size: 32px;
-}
-.home-box article {
 }
 a {
     text-decoration: none;
