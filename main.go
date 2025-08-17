@@ -17,6 +17,7 @@ import (
 	"log"
 	"mime"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -288,7 +289,7 @@ func sendEmbedded(c *fiber.Ctx, efs fs.FS, rel string) error {
 		var buf [512]byte
 		n, _ := f.Read(buf[:])
 		if n > 0 {
-			if sniff := httpDetectContentType(buf[:n]); sniff != "" {
+			if sniff := http.DetectContentType(buf[:n]); sniff != "" {
 				c.Set("Content-Type", sniff)
 			}
 		}
@@ -315,17 +316,4 @@ func sendEmbedded(c *fiber.Ctx, efs fs.FS, rel string) error {
 	}
 	// fallback unknown size
 	return c.SendStream(f, -1)
-}
-
-// httpDetectContentType is a tiny wrapper to avoid importing net/http only for DetectContentType.
-func httpDetectContentType(b []byte) string {
-	// minimal reimplementation: use mime by extension if possible, otherwise basic sniff.
-	// This is intentionally tiny: if you need robust sniffing, import net/http.DetectContentType.
-	// Let's use a quick heuristic by checking for HTML tags:
-	s := strings.TrimLeft(string(b), "\n\r\t ")
-	if strings.HasPrefix(s, "<!doctype html") || strings.HasPrefix(s, "<html") {
-		return "text/html; charset=utf-8"
-	}
-	// fallback to octet-stream
-	return "application/octet-stream"
 }
