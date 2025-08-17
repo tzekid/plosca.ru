@@ -152,22 +152,11 @@ func main() {
 			full := filepath.Join(staticFolder, filepath.FromSlash(candidate))
 			if safeFile(staticFolder, full) {
 				ext := strings.ToLower(filepath.Ext(full))
-				// Heuristic: if filename contains a date/hash-like segment (e.g. 2025 or hex) allow long immutable cache.
-				name := filepath.Base(full)
-				long := strings.Contains(name, ".min.") || strings.Contains(name, "2025") || strings.Contains(name, "20250")
 				switch ext {
-				case ".woff2", ".woff":
+				case ".woff2", ".woff", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp":
 					c.Set("Cache-Control", "public, max-age=31536000, immutable")
 				case ".css", ".js":
-					if long {
-						c.Set("Cache-Control", "public, max-age=31536000, immutable")
-					} else {
-						c.Set("Cache-Control", "public, max-age=86400")
-					}
-				default:
-					if ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".svg" || ext == ".webp" {
-						c.Set("Cache-Control", "public, max-age=31536000, immutable")
-					}
+					c.Set("Cache-Control", "public, max-age=600") // short cache while editing
 				}
 				return c.SendFile(full, true)
 			}
@@ -183,9 +172,9 @@ func main() {
 	app.Get("/*", h)
 	app.Head("/*", h)
 
-	// Backward compatibility: redirect old non-hashed stylesheet to hashed version (update when revving)
-	app.Get("/style.css", func(c *fiber.Ctx) error {
-		return c.Redirect("/style.20250817.min.css", fiber.StatusMovedPermanently)
+	// Redirect any previously referenced hashed file back to canonical style.css
+	app.Get("/style.20250817.min.css", func(c *fiber.Ctx) error {
+		return c.Redirect("/style.css", fiber.StatusMovedPermanently)
 	})
 
 	// Start server with graceful shutdown
@@ -311,21 +300,13 @@ func sendEmbedded(c *fiber.Ctx, efs fs.FS, rel string) error {
 		}
 		defer f.Close()
 	}
-	// Caching policy (mirrors disk handler logic)
+	// Caching policy (simplified)
 	loExt := strings.ToLower(ext)
-	name := path.Base(rel)
-	long := strings.Contains(name, ".min.") || strings.Contains(name, "2025") || strings.Contains(name, "20250")
 	switch loExt {
-	case ".woff", ".woff2":
+	case ".woff", ".woff2", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp":
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
 	case ".css", ".js":
-		if long {
-			c.Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else {
-			c.Set("Cache-Control", "public, max-age=86400")
-		}
-	case ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp":
-		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		c.Set("Cache-Control", "public, max-age=600")
 	}
 
 	// Use SendStream with known size
