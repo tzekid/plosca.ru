@@ -16,10 +16,26 @@
     <meta name="msapplication-TileColor" content="#d64937" />
     <meta name="theme-color" content="#ffffff" />
 
-    <link rel="preload" href="/style.css" as="style" />
+    <!-- Preload fonts early (keep in head for quicker connect / possible early hints) -->
     <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
-    <link rel="stylesheet" href="/style.css" />
+
+    <!-- Inline critical CSS for first paint (hero, layout, basic typography). -->
+    <style>
+        /* Critical subset extracted from style.css (keep tiny) */
+        html,body{margin:0;padding:0;width:100%;height:100vh;color:#444;font-family:"Quicksand",Arial,Helvetica,sans-serif;background:#fff}
+        a{color:#d64937;text-decoration:none}a:hover{text-decoration:underline}
+        .home-box{width:100%;height:90vh;display:flex;margin:0 auto;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+        .home-box h1{margin:0 0 -18px;padding:0;font-size:clamp(3rem,14vw,128px);color:#d64937;font-family:"Quando","Quicksand",Arial,Helvetica,sans-serif;line-height:0.9}
+        .home-box h1 span{opacity:.75}
+        .home-box p{margin:24px 0 0;padding:0;font-size:clamp(1.1rem,4.2vw,32px)}
+        @media (max-width:864px){.home-box h1{font-size:clamp(2.5rem,16vw,64px)}.home-box p{font-size:24px;margin-left:8vw;margin-right:8vw}}
+        /* Basic nav so layout doesn't jump before full CSS loads */
+        .nav{padding:8px}.logo{float:left;padding:8px;margin-left:32px;margin-top:2px}.logo a{color:#d64937;font-family:"Quando";font-weight:700;font-size:24px;letter-spacing:1px}
+    </style>
+    <!-- Defer full stylesheet: rel=preload + onload swap (keeps non-blocking). -->
+    <link rel="preload" href="/style.css" as="style" onload="this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="/style.css" /></noscript>
 </head>
 
 <body>

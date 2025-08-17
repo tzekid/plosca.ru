@@ -118,6 +118,7 @@ func main() {
 
 	// Core handler used for GET and HEAD
 	h := func(c *fiber.Ctx) error {
+		start := time.Now()
 		// Normalize path using path (URL-style)
 		p := strings.TrimSpace(c.Path())
 		if p == "" || p == "/" {
@@ -137,13 +138,17 @@ func main() {
 		if useEmbedded {
 			for _, candidate := range try {
 				if existsInEmbed(efs, candidate) {
-					return sendEmbedded(c, efs, candidate)
+					res := sendEmbedded(c, efs, candidate)
+					c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+					return res
 				}
 			}
 			// 404.html fallback
 			if existsInEmbed(efs, "404.html") {
 				_ = c.Status(fiber.StatusNotFound)
-				return sendEmbedded(c, efs, "404.html")
+				res := sendEmbedded(c, efs, "404.html")
+				c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+				return res
 			}
 			return c.SendStatus(fiber.StatusNotFound)
 		}
@@ -156,15 +161,23 @@ func main() {
 				switch ext {
 				case ".woff2", ".woff", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp":
 					c.Set("Cache-Control", "public, max-age=31536000, immutable")
-				case ".css", ".js":
-					c.Set("Cache-Control", "public, max-age=600") // short cache while editing
+				case ".css":
+					c.Set("Cache-Control", "public, max-age=31536000, immutable")
+				case ".js":
+					c.Set("Cache-Control", "public, max-age=86400")
+				case ".html":
+					c.Set("Cache-Control", "public, max-age=0, must-revalidate, stale-while-revalidate=30")
 				}
-				return c.SendFile(full, true)
+				res := c.SendFile(full, true)
+				c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+				return res
 			}
 		}
 		notFound := filepath.Join(staticFolder, "404.html")
 		if safeFile(staticFolder, notFound) {
-			return c.Status(fiber.StatusNotFound).SendFile(notFound, true)
+			res := c.Status(fiber.StatusNotFound).SendFile(notFound, true)
+			c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+			return res
 		}
 		return c.SendStatus(fiber.StatusNotFound)
 	}
@@ -306,8 +319,12 @@ func sendEmbedded(c *fiber.Ctx, efs fs.FS, rel string) error {
 	switch loExt {
 	case ".woff", ".woff2", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp":
 		c.Set("Cache-Control", "public, max-age=31536000, immutable")
-	case ".css", ".js":
-		c.Set("Cache-Control", "public, max-age=600")
+	case ".css":
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+	case ".js":
+		c.Set("Cache-Control", "public, max-age=86400")
+	case ".html":
+		c.Set("Cache-Control", "public, max-age=0, must-revalidate, stale-while-revalidate=30")
 	}
 
 	// Use SendStream with known size
