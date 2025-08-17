@@ -1441,6 +1441,10 @@ code span.wa {
     gap: 32px;
     margin-top: 8px;
 }
+
+.competency-col h3 {
+    padding-top: 0;
+}
 .competency-col h4 {
     margin: 0 0 8px;
     font-size: 0.9em;
