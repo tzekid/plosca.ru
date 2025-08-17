@@ -1807,7 +1807,10 @@ code span.wa {
 
 @media screen and (max-width: 864px) {
     .about-section {
-        padding: 42px 0 40px;
+        /* Previously (commit ba35427) mobile retained extra vertical padding (42/40).
+           After later padding elimination on desktop (.about-section { padding:0 }),
+           we also remove mobile override to stay consistent and tighten vertical rhythm. */
+        padding: 0; /* unify with desktop: no extra vertical padding on mobile */
     }
 
     .timeline {
