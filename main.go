@@ -139,7 +139,7 @@ func main() {
 			for _, candidate := range try {
 				if existsInEmbed(efs, candidate) {
 					res := sendEmbedded(c, efs, candidate)
-					c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+					c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(), 10))
 					return res
 				}
 			}
@@ -147,7 +147,7 @@ func main() {
 			if existsInEmbed(efs, "404.html") {
 				_ = c.Status(fiber.StatusNotFound)
 				res := sendEmbedded(c, efs, "404.html")
-				c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+				c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(), 10))
 				return res
 			}
 			return c.SendStatus(fiber.StatusNotFound)
@@ -169,14 +169,14 @@ func main() {
 					c.Set("Cache-Control", "public, max-age=0, must-revalidate, stale-while-revalidate=30")
 				}
 				res := c.SendFile(full, true)
-				c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+				c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(), 10))
 				return res
 			}
 		}
 		notFound := filepath.Join(staticFolder, "404.html")
 		if safeFile(staticFolder, notFound) {
 			res := c.Status(fiber.StatusNotFound).SendFile(notFound, true)
-			c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(),10))
+			c.Set("Server-Timing", "app;dur="+strconv.FormatInt(time.Since(start).Milliseconds(), 10))
 			return res
 		}
 		return c.SendStatus(fiber.StatusNotFound)
