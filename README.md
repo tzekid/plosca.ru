@@ -1,59 +1,88 @@
 ## plosca.ru — tiny Go Fiber static site server
 
-A minimal HTTP server that serves static files from `static_old/` with smart path resolution and an embedded (single-binary) default. Designed for simplicity, portability, and safe static delivery.
+Minimal static site server + a tiny Go-native task runner (`nob`) for repeatable run / build / deploy workflows.
 
-### Key Features
+---
+### 🚀 Quick Start (with `nob`)
 
-- Embedded assets (`go:embed`) by default — single self-contained binary.
-- Optional disk mode (`--use-disk`) for live editing without rebuilds.
-- Clean path resolution:
-  - `/` → `index.html`
-  - `/about` → `about`, `about.html`, or `about/index.html` (first that exists)
-- GET and HEAD only (others rejected with 405).
-- Middleware: panic recovery, structured logging, compression, ETag.
-- Security headers (CSP, COOP, CORP, Referrer-Policy, nosniff, Permissions-Policy).
-- Custom `404.html` fallback if present.
-- Graceful shutdown on SIGINT/SIGTERM.
-- Simple, safe file handling (`safeFile` guards traversal).
+Run (serves embedded assets on default port 9327):
+- `go run ./cmd/nob run`
 
-### Run Locally
+Choose a different port:
+- `go run ./cmd/nob run --port 8080`
 
-Fast path:
+Build portable binary (current OS/arch):
+- `go run ./cmd/nob build`
+
+Cross-compile (example linux/amd64, static-ish):
+- `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`
+
+One-shot pull + build + systemd restart (server side):
+- `go run ./cmd/nob --pull-build-restart --service mysite.service`
+
+Defaults (see `cmd/nob/main.go`):
+- Port: 9327
+- Output: `webapp`
+- LDFLAGS: `-s -w`
+- Service: `tzekid_website.service`
+
+Then open: http://localhost:9327
+
+---
+### 🧪 Direct (without nob)
+
+Run:
 - `go run .`
 - `PORT=8080 go run .`
-- `go run . --port 8080`
-- `go run . -p 8080`
-- Disk mode (skip embedding): `go run . --use-disk`
+- `go run . --port 8080` (or `-p 8080`)
 
-With helper (nob):
-- `go run ./cmd/nob run` (defaults to port `9327`)
+Disk (non-embedded) mode while editing:
+- `go run . --use-disk`
 
-Open: http://localhost:9327
+Build (debug):
+- `go build .`
 
-### Flags & Environment
+Build (smaller):
+- `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
 
-Precedence for port:
+---
+### 🔧 Flags & Environment
+
+Port precedence:
 1. `--port` / `-p`
-2. `PORT` environment variable
+2. `PORT` env var
 3. Default `9327`
 
 Other flags:
-- `--use-disk` (bool): serve from the real filesystem instead of embedded assets.
+- `--use-disk` — serve from filesystem instead of embedded bundle.
 
-### Build
+---
+### ✨ Key Features
 
-Basic:
-- `go build .`
+- Embedded assets (`go:embed`) by default (single self-contained binary)
+- Optional disk mode (`--use-disk`) for live editing w/o rebuilds
+- Smart path resolution:
+  - `/` → `index.html`
+  - `/about` → tries `about`, `about.html`, `about/index.html`
+- GET & HEAD only (others 405)
+- Middleware: panic recovery, structured logging, compression, ETag
+- Security headers (CSP, COOP, CORP, Referrer-Policy, nosniff, Permissions-Policy)
+- Custom `404.html` fallback
+- Graceful shutdown on SIGINT/SIGTERM
+- Traversal-safe file handling (`safeFile`)
 
-Release-ish (smaller binary):
-- `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
+---
+### 🏗️ Project Structure
 
-With nob helper:
-- `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`
+- `main.go` — server logic (embedding, middleware, graceful shutdown)
+- `static_old/` — static assets root (HTML, CSS, images, etc.)
+- `cmd/nob/` — helper task runner
+- `Dockerfile`, `docker-compose.yml` — container tooling
+- `go.mod`, `go.sum` — module metadata
+- `README.md`, `AGENTS.md` — docs & notes
 
-Adjust defaults in `cmd/nob/main.go`.
-
-### Docker
+---
+### 🐳 Docker
 
 ```
 docker compose up --build
@@ -63,16 +92,8 @@ Then visit: http://localhost:9327
 
 Compose maps `9327:9327` and sets `PORT=9327`.
 
-### Project Structure
-
-- `main.go` — server logic (embedding, middleware, graceful shutdown).
-- `static_old/` — static assets root (HTML, CSS, JS, images).
-- `cmd/nob/` — helper command to simplify run/build.
-- `Dockerfile`, `docker-compose.yml` — container tooling.
-- `go.mod`, `go.sum` — module metadata.
-- `README.md`, `AGENTS.md` — docs and guidelines.
-
-### Current TODO / Roadmap
+---
+### 🗺️ Roadmap / TODO
 
 Checked items are already implemented (formerly in earlier TODO list).
 
