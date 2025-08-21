@@ -22,3 +22,6 @@ nginx.conf
 
 ploscaru
 webapp
+
+.zig-cache
+zig-out
