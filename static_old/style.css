@@ -1542,9 +1542,10 @@ code span.wa {
     /* tighten final section bottom spacing */
 }
 
-.about-section+.about-section {
+/*.about-section+.about-section {
     border-top: 1px solid #f3f3f3;
-}
+}*/
+
 
 .about-section:nth-of-type(even) {
     background: linear-gradient(180deg, #ffffff 0%, #fff8f6 100%);
