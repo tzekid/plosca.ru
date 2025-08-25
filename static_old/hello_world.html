@@ -35,6 +35,15 @@
 
         <!-- font-face blocks moved to /style.css -->
         <!-- pandoc + code highlighting styles moved to /style.css -->
+        <!-- Inline base font rendering tweaks for early paint (Safari/Firefox) -->
+        <style>
+            html,body {
+                font-synthesis: none;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+        </style>
         <link rel="stylesheet" href="/style.css" />
     </head>
     <body>

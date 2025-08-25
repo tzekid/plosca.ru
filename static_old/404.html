@@ -30,6 +30,15 @@
         <meta name="theme-color" content="#ffffff" />
 
         <!-- font-face definitions moved to global /style.css -->
+        <!-- Inline base font rendering tweaks for early paint (Safari/Firefox) -->
+        <style>
+            html,body {
+                font-synthesis: none;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+        </style>
     <link rel="preload" href="/style.css" as="style" />
     <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
