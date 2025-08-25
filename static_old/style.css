@@ -467,6 +467,10 @@ body {
     background: white;
     background-position: center;
     background-size: cover;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 .nav {
