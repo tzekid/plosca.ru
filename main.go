@@ -106,7 +106,7 @@ func main() {
 			"img-src 'self' data:; "+
 			"style-src 'self' 'unsafe-inline'; "+
 			"font-src 'self'; "+
-			"script-src 'self' https://plausible.plosca.ru; "+
+			"script-src 'self' https://plausible.plosca.ru 'sha256-/6SBPqW+GW+//4nlXX6Y1nR9dWlh0gsQJ6KK71djH6A='; "+
 			"connect-src 'self' https://plausible.plosca.ru; "+
 			"object-src 'none'; "+
 			"base-uri 'self'; "+
