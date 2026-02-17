@@ -193,33 +193,51 @@ fn docker_build(args: DockerArgs) -> Result<()> {
 }
 
 fn restart_nohup(args: RestartNohupArgs) -> Result<()> {
-    if args.pull {
-        git_pull()?;
-    }
+    let RestartNohupArgs {
+        output,
+        bin,
+        log,
+        pull,
+        append,
+    } = args;
 
-    let built = build_webapp(&args.output, None)?;
-    let run_path = match args.bin {
-        Some(path) if path.is_absolute() => path,
-        Some(path) => repo_root()?.join(path),
-        None => built,
+    let root = repo_root()?;
+
+    // Resolve the run target first and stop it before rebuilding, so copying the
+    // freshly built binary over the output path does not fail with ETXTBSY.
+    let run_path_prebuild = match bin.as_ref() {
+        Some(path) if path.is_absolute() => path.clone(),
+        Some(path) => root.join(path),
+        None => root.join(&output),
     };
 
-    let binary_name = run_path
+    let binary_name = run_path_prebuild
         .file_name()
         .and_then(OsStr::to_str)
-        .ok_or_else(|| anyhow!("invalid binary path {}", run_path.display()))?;
+        .ok_or_else(|| anyhow!("invalid binary path {}", run_path_prebuild.display()))?;
 
     let _ = Command::new("pkill").args(["-x", binary_name]).status();
     let _ = Command::new("pkill")
-        .args(["-f", &run_path.display().to_string()])
+        .args(["-f", &run_path_prebuild.display().to_string()])
         .status();
 
     thread::sleep(Duration::from_millis(300));
 
-    let log_path = if args.log.is_absolute() {
-        args.log
+    if pull {
+        git_pull()?;
+    }
+
+    let built = build_webapp(&output, None)?;
+    let run_path = match bin {
+        Some(path) if path.is_absolute() => path,
+        Some(path) => root.join(path),
+        None => built,
+    };
+
+    let log_path = if log.is_absolute() {
+        log
     } else {
-        repo_root()?.join(args.log)
+        root.join(log)
     };
 
     if let Some(parent) = log_path.parent() {
@@ -227,7 +245,7 @@ fn restart_nohup(args: RestartNohupArgs) -> Result<()> {
             .with_context(|| format!("failed to create log directory {}", parent.display()))?;
     }
 
-    let file = if args.append {
+    let file = if append {
         fs::OpenOptions::new()
             .create(true)
             .append(true)
