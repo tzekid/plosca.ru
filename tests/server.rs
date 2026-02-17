@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use axum::body::{to_bytes, Body};
 use http::{header, Request, StatusCode};
-use regex::Regex;
 use tower::ServiceExt;
 
 use ploscaru::config::{AssetMode, RuntimeConfig};
@@ -19,9 +18,7 @@ async fn app(mode: AssetMode) -> axum::Router {
 }
 
 #[tokio::test]
-async fn stats_get_embed_and_disk() {
-    let re = Regex::new(r"^\d+(\.\d{2}) MB$").expect("regex should compile");
-
+async fn stats_get_is_temporarily_disabled_embed_and_disk() {
     for mode in [AssetMode::Embedded, AssetMode::Disk] {
         let app = app(mode).await;
         let req = Request::builder()
@@ -34,53 +31,19 @@ async fn stats_get_embed_and_disk() {
             .oneshot(req)
             .await
             .expect("response should be available");
-        assert_eq!(resp.status(), StatusCode::OK);
-        assert_eq!(
-            resp.headers()
-                .get(header::CACHE_CONTROL)
-                .and_then(|v| v.to_str().ok()),
-            Some("no-store")
-        );
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         let body = to_bytes(resp.into_body(), usize::MAX)
             .await
             .expect("body should read");
         let json: serde_json::Value =
             serde_json::from_slice(&body).expect("json parse should work");
-
-        assert_eq!(json["runtime"], "rust/axum");
-        assert!(
-            re.is_match(
-                json["memory"]["rss"]
-                    .as_str()
-                    .expect("rss should be string")
-            ),
-            "rss format mismatch: {}",
-            json["memory"]["rss"]
-        );
-        assert!(
-            re.is_match(
-                json["memory"]["heap_used"]
-                    .as_str()
-                    .expect("heap_used should be string")
-            ),
-            "heap_used format mismatch: {}",
-            json["memory"]["heap_used"]
-        );
-        assert!(
-            re.is_match(
-                json["memory"]["heap_total"]
-                    .as_str()
-                    .expect("heap_total should be string")
-            ),
-            "heap_total format mismatch: {}",
-            json["memory"]["heap_total"]
-        );
+        assert_eq!(json["error"], "not_found");
     }
 }
 
 #[tokio::test]
-async fn stats_head_returns_empty_body() {
+async fn stats_head_is_temporarily_disabled() {
     let app = app(AssetMode::Embedded).await;
     let req = Request::builder()
         .method("HEAD")
@@ -92,7 +55,7 @@ async fn stats_head_returns_empty_body() {
         .oneshot(req)
         .await
         .expect("response should be available");
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     let body = to_bytes(resp.into_body(), usize::MAX)
         .await

@@ -12,7 +12,7 @@ Run in disk mode (live-edit `static_old/`):
 - `cargo run --release --bin webapp -- --use-disk`
 
 Stats endpoint:
-- `curl -sS localhost:9327/stats | jq`
+- Temporarily disabled (kept in code, not routed).
 
 ### CLI (`webapp`)
 
@@ -28,7 +28,7 @@ Flags:
 
 ### HTTP Behavior
 
-- `GET /stats` and `HEAD /stats`
+- `/stats` is currently disabled (kept for later re-enable).
 - Static catch-all uses extensionless fallback:
   - exact path
   - `path.html`
@@ -38,7 +38,7 @@ Flags:
   - HTML accept (`text/html` / `application/xhtml+xml`) -> `404.html`
   - JSON/ambiguous accept (`application/json`, `*/*`) -> `{"error":"not_found"}`
 
-### `/stats` JSON Schema
+### `/stats` JSON Schema (when re-enabled)
 
 ```json
 {
@@ -56,7 +56,7 @@ Flags:
 - Images/fonts/css: `public, max-age=31536000, immutable`
 - JS: `public, max-age=86400`
 - HTML: `public, max-age=0, must-revalidate, stale-while-revalidate=30`
-- `/stats`: `no-store`
+- `/stats`: `no-store` (when enabled)
 
 ### Security Headers (minimal baseline)
 

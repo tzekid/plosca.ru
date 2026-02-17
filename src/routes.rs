@@ -12,6 +12,8 @@ use crate::config::RuntimeConfig;
 use crate::error_response::{prefers_html, NotFoundJson};
 use crate::static_files::{AssetBackend, AssetPayload};
 
+const STATS_ENDPOINT_ENABLED: bool = false;
+
 #[derive(Clone)]
 pub struct AppState {
     assets: Arc<AssetBackend>,
@@ -23,13 +25,16 @@ pub async fn build(config: &RuntimeConfig) -> anyhow::Result<Router> {
         assets: Arc::new(assets),
     };
 
-    let router = Router::new()
-        .route("/stats", get(stats_get).head(stats_head))
+    let mut router = Router::new()
         .route("/", get(static_root_get).head(static_root_head))
         .route("/{*path}", get(static_get).head(static_head))
         .layer(TraceLayer::new_for_http())
         .layer(middleware::from_fn(security_headers_middleware))
         .with_state(state);
+
+    if STATS_ENDPOINT_ENABLED {
+        router = router.route("/stats", get(stats_get).head(stats_head));
+    }
 
     Ok(router)
 }

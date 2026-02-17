@@ -11,7 +11,7 @@ Key characteristics:
 - Embedded static assets by default via `include_dir!`.
 - Optional disk mode (`--assets disk` or `--use-disk`) for live iteration.
 - Extensionless path resolution with `.html` and `index.html` fallbacks.
-- `GET` and `HEAD` only for `/stats` and static routes; other methods return `405`.
+- `GET` and `HEAD` only for routed endpoints; other methods return `405`.
 - Minimal security headers (`nosniff`, `Referrer-Policy`) and explicit cache policy by file type.
 - Accept-aware 404 responses:
   - HTML accept -> `404.html`
@@ -38,7 +38,7 @@ Two mutually exclusive modes are selected at startup:
 - `src/server.rs`: listener setup and graceful shutdown.
 - `src/routes.rs`: route registration and response behavior.
 - `src/static_files.rs`: embedded/disk static resolution + cache/content-type.
-- `src/stats.rs`: runtime memory stats for `/stats`.
+- `src/stats.rs`: runtime memory stats payload (endpoint currently disabled).
 - `src/error_response.rs`: 404 negotiation helpers.
 - `src/bin/nob.rs`: Rust task runner.
 - `nob`: root launcher wrapper for `target/release/nob`.
@@ -70,7 +70,7 @@ Task-runner commands:
 
 ## Routing + API Contract
 
-- `GET /stats`, `HEAD /stats`
+- `/stats` is currently disabled (code retained for later re-enable).
 - Static routes: `GET`/`HEAD` catch-all with candidate order:
   1. exact path
   2. `path.html` (if extensionless)
@@ -84,7 +84,7 @@ Task-runner commands:
 - Images/fonts/css: `public, max-age=31536000, immutable`
 - JS: `public, max-age=86400`
 - HTML: `public, max-age=0, must-revalidate, stale-while-revalidate=30`
-- `/stats`: `no-store`
+- `/stats`: `no-store` (when enabled)
 
 ## Security Headers
 
