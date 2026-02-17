@@ -4,7 +4,7 @@
 .vscode/
 
 # Go build artifacts
-bin/
+
 *.exe
 *.dll
 *.so
@@ -13,7 +13,6 @@ bin/
 *.out
 coverage/
 target/
-nob.bin
 
 # Logs
 *.log
@@ -24,6 +23,7 @@ nginx.conf
 
 ploscaru
 webapp
+nob
 
 .zig-cache
 zig-out
