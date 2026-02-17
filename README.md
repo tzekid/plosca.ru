@@ -35,6 +35,7 @@ Run:
 - `go run .`
 - `PORT=8080 go run .`
 - `go run . --port 8080` (or `-p 8080`)
+- `curl -sS localhost:9327/stats | jq` (runtime + memory stats)
 
 Disk (non-embedded) mode while editing:
 - `go run . --use-disk`
@@ -65,6 +66,7 @@ Other flags:
   - `/` → `index.html`
   - `/about` → tries `about`, `about.html`, `about/index.html`
 - GET & HEAD only (others 405)
+- `/stats` endpoint with runtime + memory JSON (`rss`, `heap_used`, `heap_total`)
 - Middleware: panic recovery, structured logging, compression, ETag
 - Security headers (CSP, COOP, CORP, Referrer-Policy, nosniff, Permissions-Policy)
 - Custom `404.html` fallback

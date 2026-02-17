@@ -13,6 +13,7 @@ import (
 	"context"
 	"embed"
 	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"mime"
@@ -22,6 +23,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -38,6 +40,17 @@ const staticFolder = "static_old"
 
 //go:embed static_old/*
 var embeddedFiles embed.FS
+
+type statsResponse struct {
+	Runtime string         `json:"runtime"`
+	Memory  memoryResponse `json:"memory"`
+}
+
+type memoryResponse struct {
+	RSS       string `json:"rss"`
+	HeapUsed  string `json:"heap_used"`
+	HeapTotal string `json:"heap_total"`
+}
 
 func main() {
 	// Flags (flags override env)
@@ -78,6 +91,47 @@ func main() {
 		}
 	}
 
+	app := newApp(useEmbedded, efs)
+
+	// Start server with graceful shutdown
+	addr := net.JoinHostPort("0.0.0.0", strconv.Itoa(port))
+	abs, _ := filepath.Abs(".")
+	log.Printf("Serving %s (embedded=%v) from %s on %s\n", staticFolder, useEmbedded, abs, addr)
+
+	// Run server
+	serverErrCh := make(chan error, 1)
+	go func() {
+		if err := app.Listen(addr); err != nil {
+			// When Shutdown is called, Listen returns an error; only log if unexpected.
+			serverErrCh <- err
+		}
+	}()
+
+	// Wait for signal
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case sig := <-stop:
+		log.Printf("signal received: %v — shutting down", sig)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := app.Shutdown(); err != nil {
+			log.Printf("graceful shutdown error: %v", err)
+		}
+		// allow a short window to observe Listen error if any
+		select {
+		case e := <-serverErrCh:
+			if e != nil && !strings.Contains(e.Error(), "server closed") {
+				log.Printf("server error: %v", e)
+			}
+		case <-ctx.Done():
+		}
+	case e := <-serverErrCh:
+		log.Fatalf("server error: %v", e)
+	}
+}
+
+func newApp(useEmbedded bool, efs fs.FS) *fiber.App {
 	// Fiber app with middleware
 	app := fiber.New(fiber.Config{
 		ServerHeader: "ploscaru",
@@ -116,6 +170,25 @@ func main() {
 			"upgrade-insecure-requests")
 		return c.Next()
 	})
+
+	statsHandler := func(c *fiber.Ctx) error {
+		c.Set("Cache-Control", "no-store")
+
+		mem := collectMemoryStats()
+		resp := statsResponse{
+			Runtime: "go/fiber",
+			Memory: memoryResponse{
+				RSS:       formatMB(mem.rss),
+				HeapUsed:  formatMB(mem.heapUsed),
+				HeapTotal: formatMB(mem.heapTotal),
+			},
+		}
+		return c.JSON(resp)
+	}
+
+	// Dedicated stats endpoint. Must be declared before catch-all static routes.
+	app.Get("/stats", statsHandler)
+	app.Head("/stats", statsHandler)
 
 	// Core handler used for GET and HEAD
 	h := func(c *fiber.Ctx) error {
@@ -192,42 +265,52 @@ func main() {
 		return c.Redirect("/style.css", fiber.StatusMovedPermanently)
 	})
 
-	// Start server with graceful shutdown
-	addr := net.JoinHostPort("0.0.0.0", strconv.Itoa(port))
-	abs, _ := filepath.Abs(".")
-	log.Printf("Serving %s (embedded=%v) from %s on %s\n", staticFolder, useEmbedded, abs, addr)
+	return app
+}
 
-	// Run server
-	serverErrCh := make(chan error, 1)
-	go func() {
-		if err := app.Listen(addr); err != nil {
-			// When Shutdown is called, Listen returns an error; only log if unexpected.
-			serverErrCh <- err
-		}
-	}()
+type memorySnapshot struct {
+	rss       uint64
+	heapUsed  uint64
+	heapTotal uint64
+}
 
-	// Wait for signal
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	select {
-	case sig := <-stop:
-		log.Printf("signal received: %v — shutting down", sig)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := app.Shutdown(); err != nil {
-			log.Printf("graceful shutdown error: %v", err)
-		}
-		// allow a short window to observe Listen error if any
-		select {
-		case e := <-serverErrCh:
-			if e != nil && !strings.Contains(e.Error(), "server closed") {
-				log.Printf("server error: %v", e)
-			}
-		case <-ctx.Done():
-		}
-	case e := <-serverErrCh:
-		log.Fatalf("server error: %v", e)
+func collectMemoryStats() memorySnapshot {
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+
+	rss := mem.Sys
+	if procRSS, ok := readProcRSSBytes(); ok {
+		rss = procRSS
 	}
+
+	return memorySnapshot{
+		rss:       rss,
+		heapUsed:  mem.HeapAlloc,
+		heapTotal: mem.HeapSys,
+	}
+}
+
+func readProcRSSBytes() (uint64, bool) {
+	data, err := os.ReadFile("/proc/self/statm")
+	if err != nil {
+		return 0, false
+	}
+
+	fields := strings.Fields(string(data))
+	if len(fields) < 2 {
+		return 0, false
+	}
+
+	pages, err := strconv.ParseUint(fields[1], 10, 64)
+	if err != nil {
+		return 0, false
+	}
+
+	return pages * uint64(os.Getpagesize()), true
+}
+
+func formatMB(bytes uint64) string {
+	return fmt.Sprintf("%.2f MB", float64(bytes)/(1024*1024))
 }
 
 // resolvePort: flags first (portFlag / -p), then PORT env, then default 9327
