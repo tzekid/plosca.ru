@@ -1,14 +1,14 @@
 ########## Build stage ##########
-FROM --platform=linux/amd64 golang:1.23-alpine AS builder
+FROM --platform=linux/amd64 rust:1-alpine AS builder
 
 WORKDIR /app
-RUN apk add --no-cache ca-certificates && update-ca-certificates
+RUN apk add --no-cache musl-dev pkgconfig build-base ca-certificates && update-ca-certificates
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+COPY static_old ./static_old
 
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /bin/webapp .
+RUN cargo build --release --bin webapp
 
 ########## Runtime stage ##########
 FROM --platform=linux/amd64 alpine:3.20
@@ -17,7 +17,7 @@ RUN adduser -D -u 10001 appuser
 USER appuser
 WORKDIR /app
 
-COPY --from=builder /bin/webapp /app/webapp
+COPY --from=builder /app/target/release/webapp /app/webapp
 COPY --from=builder /app/static_old /app/static_old
 
 ENV PORT=9327

@@ -1,85 +1,100 @@
 # Repository Guidelines
 
-These guidelines describe structure, runtime modes (embedded vs disk), coding conventions, middleware, security posture, and contribution workflow for the plosca.ru static site server.
+These guidelines describe structure, runtime modes, routing behavior, security posture, and contribution workflow for the `plosca.ru` Rust/Axum static site server.
 
 ## Overview
 
-The binary is a minimal Go Fiber application that serves static assets under `static_old/`.
+The production binary is `webapp`, built from this Rust crate.
 
 Key characteristics:
-- Single-binary by default via Go `embed` (no external runtime asset directory needed).
-- Optional disk mode (`--use-disk`) for live iteration without rebuild.
+- Axum-based HTTP server.
+- Embedded static assets by default via `include_dir!`.
+- Optional disk mode (`--assets disk` or `--use-disk`) for live iteration.
 - Extensionless path resolution with `.html` and `index.html` fallbacks.
-- GET and HEAD only; other HTTP methods yield 405.
-- Lightweight but defense-in-depth: path sanitation, traversal prevention, security headers.
+- `GET` and `HEAD` only for `/stats` and static routes; other methods return `405`.
+- Minimal security headers (`nosniff`, `Referrer-Policy`) and explicit cache policy by file type.
+- Accept-aware 404 responses:
+  - HTML accept -> `404.html`
+  - JSON or ambiguous (`*/*`) -> `{"error":"not_found"}`
 
 ## Runtime Modes
 
-There are two mutually exclusive modes selected at process start:
+Two mutually exclusive modes are selected at startup:
 
 1. Embedded Mode (default)
-   - Assets compiled into the binary with `//go:embed static_old/*`.
-   - Immutable at runtime; reproducible deployments.
-   - Lowest operational complexity (only ship the binary).
+   - Uses compile-time embedded `static_old/` assets.
+   - No runtime asset directory dependency.
 
-2. Disk Mode (`--use-disk`)
-   - Serves from the on-disk `static_old/` directory.
-   - Supports editing assets without recompilation (development convenience).
-   - Traversal mitigated by `safeFile` (absolute prefix check).
-
-Mode Selection Logic:
-- If `--use-disk` provided -> Disk Mode.
-- Else attempt `fs.Sub(embeddedFiles, "static_old")` -> if successful -> Embedded Mode.
-- If embed sub-FS creation fails (unexpected) -> fallback to Disk Mode with a warning.
+2. Disk Mode (`--assets disk` / `--use-disk`)
+   - Serves from on-disk `static_old/`.
+   - Canonical-path guard prevents traversal outside static root.
 
 ## Project Structure
 
-- `main.go`          : Server (embedding, path resolution, middleware, graceful shutdown).
-- `static_old/`      : Static assets (HTML, CSS, JS, images).
-- `cmd/nob/`         : Helper build/run command with preset flags.
-- `Dockerfile`       : Container build definition.
-- `docker-compose.yml`: Local composition (maps port 9327, sets `PORT`).
-- `go.mod`, `go.sum` : Module metadata and dependency checksums.
-- `README.md`        : User-facing overview and usage.
-- `AGENTS.md`        : This guideline document.
+- `Cargo.toml`, `Cargo.lock`: Rust crate + dependency lock.
+- `src/main.rs`: `webapp` binary entrypoint.
+- `src/lib.rs`: shared modules and global allocator instrumentation.
+- `src/config.rs`: CLI and runtime config resolution.
+- `src/server.rs`: listener setup and graceful shutdown.
+- `src/routes.rs`: route registration and response behavior.
+- `src/static_files.rs`: embedded/disk static resolution + cache/content-type.
+- `src/stats.rs`: runtime memory stats for `/stats`.
+- `src/error_response.rs`: 404 negotiation helpers.
+- `src/bin/nob.rs`: Rust task runner.
+- `nob`: root launcher wrapper for `target/release/nob`.
+- `tests/server.rs`: integration tests.
+- `static_old/`: static assets.
+- `Dockerfile`, `docker-compose.yml`: container build/run.
 
 ## Build, Run, and Ports
 
-Port resolution precedence:
-1. `--port` flag
-2. `-p` short flag
-3. `PORT` environment variable
-4. Default `9327`
+Port precedence:
+1. `--port`
+2. `PORT` environment variable
+3. Default `9327`
 
 Commands:
-- Run (embedded): `go run .`
-- Run (disk): `go run . --use-disk`
-- Run with helper: `go run ./cmd/nob run`
-- Build debug: `go build .`
-- Build release-ish: `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
-- Helper build: `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`
+- Run (embedded): `cargo run --release --bin webapp`
+- Run (disk): `cargo run --release --bin webapp -- --use-disk`
+- Build app: `cargo build --release --bin webapp`
+- Build task runner: `cargo build --release --bin nob`
+- Test: `cargo test`
 - Docker: `docker compose up --build`
 
+Task-runner commands:
+- `./nob run --port 9327`
+- `./nob build --output webapp`
+- `./nob restart-nohup --pull --log webapp.log`
+- `./nob pbr --service tzekid_website.service`
+- `./nob docker --repo tzekid/plosca.ru --tag latest`
 
-## Roadmap / TODO
+## Routing + API Contract
 
-Implemented:
-- [x] Compression
-- [x] Logging
-- [x] Graceful shutdown
-- [x] Embedded asset mode
-- [x] ETag middleware
-- [x] Path traversal safeguards
-- [x] Extensionless + index resolution
+- `GET /stats`, `HEAD /stats`
+- Static routes: `GET`/`HEAD` catch-all with candidate order:
+  1. exact path
+  2. `path.html` (if extensionless)
+  3. `path/index.html` (if extensionless)
+- `/stats` schema:
+  - `runtime: "rust/axum"`
+  - `memory.rss`, `memory.heap_used`, `memory.heap_total` as `"N.NN MB"`
 
-Planned / Consider:
-- [ ] Last-Modified & Cache-Control enhancements (immutable asset strategy)
-- [ ] Richer MIME detection (`net/http.DetectContentType`)
-- [ ] Prometheus metrics (request count, latency histogram, status classes)
-- [ ] Automated tests (resolution, traversal, HEAD, 404)
-- [ ] Recursive embedding if deeper directory hierarchy introduced
-- [ ] Configurable CSP via env or flag
-- [ ] Symlink handling policy clarity (`EvalSymlinks`)
-- [ ] CI pipeline (lint, vet, test, build)
-- [ ] Pre-compressed asset serving (.br, .gz)
-- [ ] Optional directory listing JSON or sitemap generator
+## Cache Policy
+
+- Images/fonts/css: `public, max-age=31536000, immutable`
+- JS: `public, max-age=86400`
+- HTML: `public, max-age=0, must-revalidate, stale-while-revalidate=30`
+- `/stats`: `no-store`
+
+## Security Headers
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: no-referrer-when-downgrade`
+
+## Roadmap / Consider
+
+- Stronger cache validators (`ETag`/`Last-Modified`) if needed.
+- Optional configurable CSP policy.
+- Prometheus metrics.
+- CI pipeline (`fmt`, `clippy`, `test`, release build).
+- Optional pre-compressed static asset serving.

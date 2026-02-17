@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$ROOT/target/release/nob"
+
+if [[ ! -x "$BIN" ]]; then
+  cargo build --release --bin nob --manifest-path "$ROOT/Cargo.toml"
+fi
+
+exec "$BIN" "$@"

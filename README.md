@@ -1,119 +1,82 @@
-## plosca.ru — tiny Go Fiber static site server
+## plosca.ru — axum static site server
 
-Minimal static site server + a tiny Go-native task runner (`nob`) for repeatable run / build / deploy workflows.
+Rust/Axum rewrite of the personal site server.
 
----
-### 🚀 Quick Start (with `nob`)
+### Quick Start
 
-Run (serves embedded assets on default port 9327):
-- `go run ./cmd/nob run`
+Run with embedded assets (default):
+- `cargo run --release --bin webapp`
 
-Choose a different port:
-- `go run ./cmd/nob run --port 8080`
+Run in disk mode (live-edit `static_old/`):
+- `cargo run --release --bin webapp -- --assets disk`
+- `cargo run --release --bin webapp -- --use-disk`
 
-Build portable binary (current OS/arch):
-- `go run ./cmd/nob build`
+Stats endpoint:
+- `curl -sS localhost:9327/stats | jq`
 
-Cross-compile (example linux/amd64, static-ish):
-- `go run ./cmd/nob build --os linux --arch amd64 --cgo 0 --output webapp`
+### CLI (`webapp`)
 
-One-shot pull + build + systemd restart (server side):
-- `go run ./cmd/nob --pull-build-restart --service mysite.service`
+`webapp serve` is the explicit subcommand; running without a subcommand uses `serve` defaults.
 
-Defaults (see `cmd/nob/main.go`):
-- Port: 9327
-- Output: `webapp`
-- LDFLAGS: `-s -w`
-- Service: `tzekid_website.service`
+Flags:
+- `--port <u16>`: precedence is `--port`, then `PORT`, then `9327`.
+- `--host <host>`: bind host, default `0.0.0.0`.
+- `--assets <embedded|disk>`: default `embedded`.
+- `--use-disk`: shorthand for `--assets disk`.
+- `--static-dir <path>`: default `static_old`.
+- `--shutdown-timeout-seconds <u64>`: default `5`.
 
-Then open: http://localhost:9327
+### HTTP Behavior
 
----
-### 🧪 Direct (without nob)
+- `GET /stats` and `HEAD /stats`
+- Static catch-all uses extensionless fallback:
+  - exact path
+  - `path.html`
+  - `path/index.html`
+- `GET`/`HEAD` only on static and `/stats`; others return `405`
+- 404 negotiation:
+  - HTML accept (`text/html` / `application/xhtml+xml`) -> `404.html`
+  - JSON/ambiguous accept (`application/json`, `*/*`) -> `{"error":"not_found"}`
 
-Run:
-- `go run .`
-- `PORT=8080 go run .`
-- `go run . --port 8080` (or `-p 8080`)
-- `curl -sS localhost:9327/stats | jq` (runtime + memory stats)
+### `/stats` JSON Schema
 
-Disk (non-embedded) mode while editing:
-- `go run . --use-disk`
-
-Build (debug):
-- `go build .`
-
-Build (smaller):
-- `CGO_ENABLED=0 go build -ldflags "-s -w" -o webapp .`
-
----
-### 🔧 Flags & Environment
-
-Port precedence:
-1. `--port` / `-p`
-2. `PORT` env var
-3. Default `9327`
-
-Other flags:
-- `--use-disk` — serve from filesystem instead of embedded bundle.
-
----
-### ✨ Key Features
-
-- Embedded assets (`go:embed`) by default (single self-contained binary)
-- Optional disk mode (`--use-disk`) for live editing w/o rebuilds
-- Smart path resolution:
-  - `/` → `index.html`
-  - `/about` → tries `about`, `about.html`, `about/index.html`
-- GET & HEAD only (others 405)
-- `/stats` endpoint with runtime + memory JSON (`rss`, `heap_used`, `heap_total`)
-- Middleware: panic recovery, structured logging, compression, ETag
-- Security headers (CSP, COOP, CORP, Referrer-Policy, nosniff, Permissions-Policy)
-- Custom `404.html` fallback
-- Graceful shutdown on SIGINT/SIGTERM
-- Traversal-safe file handling (`safeFile`)
-
----
-### 🏗️ Project Structure
-
-- `main.go` — server logic (embedding, middleware, graceful shutdown)
-- `static_old/` — static assets root (HTML, CSS, images, etc.)
-- `cmd/nob/` — helper task runner
-- `Dockerfile`, `docker-compose.yml` — container tooling
-- `go.mod`, `go.sum` — module metadata
-- `README.md`, `AGENTS.md` — docs & notes
-
----
-### 🐳 Docker
-
+```json
+{
+  "runtime": "rust/axum",
+  "memory": {
+    "rss": "12.34 MB",
+    "heap_used": "1.23 MB",
+    "heap_total": "4.56 MB"
+  }
+}
 ```
+
+### Cache Policy
+
+- Images/fonts/css: `public, max-age=31536000, immutable`
+- JS: `public, max-age=86400`
+- HTML: `public, max-age=0, must-revalidate, stale-while-revalidate=30`
+- `/stats`: `no-store`
+
+### Security Headers (minimal baseline)
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: no-referrer-when-downgrade`
+
+### `nob` Task Runner
+
+Use the root wrapper:
+- `./nob run --port 9327`
+- `./nob build --output webapp`
+- `./nob restart-nohup --pull --log webapp.log`
+- `./nob pbr --service tzekid_website.service`
+- `./nob docker --repo tzekid/plosca.ru --tag latest`
+- `./nob self-build --output nob.bin`
+
+### Docker
+
+```bash
 docker compose up --build
 ```
 
-Then visit: http://localhost:9327
-
-Compose maps `9327:9327` and sets `PORT=9327`.
-
----
-### 🗺️ Roadmap / TODO
-
-Checked items are already implemented (formerly in earlier TODO list).
-
-Implemented:
-- [x] Compression middleware
-- [x] Logging middleware
-- [x] Graceful shutdown on signals
-- [x] Embedded asset mode (default)
-- [x] ETag support
-- [x] Safe path handling
-
-Still planned / optional:
-- [ ] Add Last-Modified / stronger cache headers
-- [ ] Switch to `net/http.DetectContentType` for richer sniffing
-- [ ] Add (Prometheus) metrics (status counts, latency histograms)
-- [ ] Add automated tests (path traversal, candidate resolution, 404 fallback, HEAD behavior)
-- [ ] Support recursive embed pattern if deeper subdirectories are added
-- [ ] Optional directory-level index JSON or sitemap generator
-- [ ] Configurable CSP (env or flag)
-- [ ] Symlink policy review (replace with `EvalSymlinks` if needed in disk mode)
-- [ ] Add CI workflow (lint + build + test)
+Then open: <http://localhost:9327>
