@@ -1,119 +1,68 @@
-use std::ffi::OsStr;
-use std::path::{Component, Path, PathBuf};
+use std::cmp::Ordering;
+use std::path::{Component, Path};
 
-use anyhow::Context;
-use bytes::Bytes;
-use include_dir::{include_dir, Dir};
-use mime_guess::MimeGuess;
-use tokio::fs;
-use tracing::warn;
+use axum::http::{header, HeaderMap};
 
-use crate::config::AssetMode;
-
-static EMBEDDED_STATIC: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/static_old");
-
-#[derive(Debug, Clone)]
-pub enum AssetBackend {
-    Embedded,
-    Disk {
-        root: PathBuf,
-        canonical_root: Option<PathBuf>,
-    },
+mod generated {
+    include!(env!("ASSET_MANIFEST_RS"));
 }
 
 #[derive(Debug, Clone)]
 pub struct AssetPayload {
-    pub body: Bytes,
-    pub content_type: String,
-    pub cache_control: Option<String>,
+    pub body: &'static [u8],
+    pub content_type: &'static str,
+    pub cache_control: &'static str,
+    pub etag: &'static str,
+    pub content_encoding: Option<&'static str>,
 }
 
-impl AssetBackend {
-    pub async fn new(mode: AssetMode, static_dir: PathBuf) -> anyhow::Result<Self> {
-        match mode {
-            AssetMode::Embedded => Ok(Self::Embedded),
-            AssetMode::Disk => {
-                let canonical_root = match fs::canonicalize(&static_dir).await {
-                    Ok(path) => Some(path),
-                    Err(err) => {
-                        warn!(
-                            static_dir = %static_dir.display(),
-                            error = %err,
-                            "static directory is not available; disk mode will return 404"
-                        );
-                        None
-                    }
-                };
-                Ok(Self::Disk {
-                    root: static_dir,
-                    canonical_root,
-                })
-            }
-        }
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AssetStore;
+
+impl AssetStore {
+    pub fn new() -> Self {
+        Self
     }
 
-    pub async fn resolve_request_path(&self, request_path: &str) -> Option<AssetPayload> {
+    pub fn resolve_request_path(
+        &self,
+        request_path: &str,
+        headers: &HeaderMap,
+    ) -> Option<AssetPayload> {
         let normalized = normalize_request_path(request_path)?;
-        for candidate in candidate_paths(&normalized) {
-            if let Some(asset) = self.load_candidate(&candidate).await {
-                return Some(asset);
+        let preference = preferred_encoding(headers);
+
+        if let Some(asset) = find_asset(&normalized) {
+            return Some(select_variant(asset, preference));
+        }
+
+        let basename = normalized.rsplit('/').next().unwrap_or(&normalized);
+        if !basename.contains('.') {
+            let html_candidate = format!("{normalized}.html");
+            if let Some(asset) = find_asset(&html_candidate) {
+                return Some(select_variant(asset, preference));
+            }
+
+            let index_candidate = format!("{normalized}/index.html");
+            if let Some(asset) = find_asset(&index_candidate) {
+                return Some(select_variant(asset, preference));
             }
         }
+
         None
     }
 
-    pub async fn load_not_found_html(&self) -> Option<AssetPayload> {
-        self.load_candidate("404.html").await
+    pub fn not_found(&self, headers: &HeaderMap) -> Option<AssetPayload> {
+        let asset = find_asset("404.html")?;
+        Some(select_variant(asset, preferred_encoding(headers)))
     }
+}
 
-    async fn load_candidate(&self, rel_path: &str) -> Option<AssetPayload> {
-        let rel_path = sanitize_relative_path(rel_path)?;
-
-        match self {
-            AssetBackend::Embedded => {
-                let file = EMBEDDED_STATIC.get_file(&rel_path)?;
-                let body = Bytes::copy_from_slice(file.contents());
-                Some(AssetPayload {
-                    content_type: content_type_for(&rel_path),
-                    cache_control: cache_control_for(&rel_path).map(ToString::to_string),
-                    body,
-                })
-            }
-            AssetBackend::Disk {
-                root,
-                canonical_root,
-            } => {
-                let canonical_root = canonical_root.as_ref()?;
-                let candidate = root.join(Path::new(&rel_path));
-
-                let metadata = fs::metadata(&candidate).await.ok()?;
-                if !metadata.is_file() {
-                    return None;
-                }
-
-                let canonical_target = fs::canonicalize(&candidate).await.ok()?;
-                if !canonical_target.starts_with(canonical_root) {
-                    warn!(
-                        candidate = %candidate.display(),
-                        resolved = %canonical_target.display(),
-                        "blocked candidate outside static root"
-                    );
-                    return None;
-                }
-
-                let body = fs::read(&canonical_target)
-                    .await
-                    .with_context(|| format!("failed reading {}", canonical_target.display()))
-                    .ok()?;
-
-                Some(AssetPayload {
-                    content_type: content_type_for(&rel_path),
-                    cache_control: cache_control_for(&rel_path).map(ToString::to_string),
-                    body: Bytes::from(body),
-                })
-            }
-        }
-    }
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum EncodingPreference {
+    Br,
+    Gzip,
+    Identity,
 }
 
 pub fn normalize_request_path(request_path: &str) -> Option<String> {
@@ -161,9 +110,7 @@ fn sanitize_relative_path(raw: &str) -> Option<String> {
             }
             Component::CurDir => {}
             Component::ParentDir => {
-                if components.pop().is_none() {
-                    return None;
-                }
+                components.pop()?;
             }
             Component::RootDir | Component::Prefix(_) => {}
         }
@@ -172,24 +119,119 @@ fn sanitize_relative_path(raw: &str) -> Option<String> {
     Some(components.join("/"))
 }
 
-fn content_type_for(path: &str) -> String {
-    let guess = MimeGuess::from_path(path).first_or_octet_stream();
-    guess.essence_str().to_string()
+pub fn matches_if_none_match(headers: &HeaderMap, etag: &str) -> bool {
+    headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .any(|candidate| candidate == "*" || candidate == etag)
+        })
+        .unwrap_or(false)
 }
 
-fn cache_control_for(path: &str) -> Option<&'static str> {
-    let ext = Path::new(path)
-        .extension()
-        .and_then(OsStr::to_str)
-        .map(|v| v.to_ascii_lowercase());
+fn find_asset(path: &str) -> Option<&'static generated::GeneratedAsset> {
+    generated::ASSETS
+        .binary_search_by_key(&path, |asset| asset.path)
+        .ok()
+        .map(|index| &generated::ASSETS[index])
+}
 
-    match ext.as_deref() {
-        Some("woff") | Some("woff2") | Some("png") | Some("jpg") | Some("jpeg") | Some("gif")
-        | Some("svg") | Some("webp") => Some("public, max-age=31536000, immutable"),
-        Some("css") => Some("public, max-age=31536000, immutable"),
-        Some("js") => Some("public, max-age=86400"),
-        Some("html") => Some("public, max-age=0, must-revalidate, stale-while-revalidate=30"),
-        _ => None,
+fn select_variant(
+    asset: &'static generated::GeneratedAsset,
+    preference: EncodingPreference,
+) -> AssetPayload {
+    let variant = match preference {
+        EncodingPreference::Br => asset
+            .br
+            .as_ref()
+            .or(asset.gzip.as_ref())
+            .unwrap_or(&asset.raw),
+        EncodingPreference::Gzip => asset
+            .gzip
+            .as_ref()
+            .or(asset.br.as_ref())
+            .unwrap_or(&asset.raw),
+        EncodingPreference::Identity => &asset.raw,
+    };
+
+    AssetPayload {
+        body: variant.body,
+        content_type: asset.content_type,
+        cache_control: asset.cache_control,
+        etag: variant.etag,
+        content_encoding: variant.content_encoding,
+    }
+}
+
+fn preferred_encoding(headers: &HeaderMap) -> EncodingPreference {
+    let Some(raw) = headers
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|value| value.to_str().ok())
+    else {
+        return EncodingPreference::Identity;
+    };
+
+    let mut br = 0.0_f32;
+    let mut gzip = 0.0_f32;
+    let mut identity = 1.0_f32;
+    let mut wildcard = None::<f32>;
+
+    for item in raw
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+    {
+        let mut parts = item.split(';').map(str::trim);
+        let coding = parts.next().unwrap_or_default();
+        let mut quality = 1.0_f32;
+
+        for part in parts {
+            if let Some(value) = part.strip_prefix("q=") {
+                quality = value.parse::<f32>().unwrap_or(0.0);
+            }
+        }
+
+        match coding {
+            "br" => br = quality,
+            "gzip" => gzip = quality,
+            "identity" => identity = quality,
+            "*" => wildcard = Some(quality),
+            _ => {}
+        }
+    }
+
+    if br == 0.0 {
+        br = wildcard.unwrap_or(0.0);
+    }
+    if gzip == 0.0 {
+        gzip = wildcard.unwrap_or(0.0);
+    }
+
+    let mut choices = [
+        (EncodingPreference::Br, br),
+        (EncodingPreference::Gzip, gzip),
+        (EncodingPreference::Identity, identity),
+    ];
+    choices.sort_by(|left, right| compare_quality(*left, *right));
+    choices[0].0
+}
+
+fn compare_quality(left: (EncodingPreference, f32), right: (EncodingPreference, f32)) -> Ordering {
+    right
+        .1
+        .partial_cmp(&left.1)
+        .unwrap_or(Ordering::Equal)
+        .then_with(|| priority(right.0).cmp(&priority(left.0)))
+}
+
+fn priority(encoding: EncodingPreference) -> u8 {
+    match encoding {
+        EncodingPreference::Br => 3,
+        EncodingPreference::Gzip => 2,
+        EncodingPreference::Identity => 1,
     }
 }
 
@@ -222,5 +264,19 @@ mod tests {
     fn candidate_chain_for_file_with_extension() {
         let got = candidate_paths("style.css");
         assert_eq!(got, vec!["style.css"]);
+    }
+
+    #[test]
+    fn prefer_brotli_over_gzip() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ACCEPT_ENCODING, "gzip, br".parse().unwrap());
+        assert_eq!(preferred_encoding(&headers), EncodingPreference::Br);
+    }
+
+    #[test]
+    fn if_none_match_matches_exact_etag() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::IF_NONE_MATCH, "\"abc\", \"def\"".parse().unwrap());
+        assert!(matches_if_none_match(&headers, "\"def\""));
     }
 }

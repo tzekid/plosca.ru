@@ -11,8 +11,8 @@ pub async fn run(config: RuntimeConfig) -> anyhow::Result<()> {
 
     info!(
         address = %addr,
-        asset_mode = ?config.asset_mode,
-        static_dir = %config.static_dir.display(),
+        metrics_enabled = config.metrics_enabled,
+        hsts_max_age = ?config.hsts_max_age,
         shutdown_timeout_seconds = config.shutdown_timeout.as_secs(),
         "starting webapp"
     );

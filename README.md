@@ -1,82 +1,88 @@
-## plosca.ru — axum static site server
+## plosca.ru — embedded static site server
 
-Rust/Axum rewrite of the personal site server.
+This repo builds a single self-contained Rust/Axum binary that serves the site from compile-time embedded assets in `static/`.
 
 ### Quick Start
 
-Run with embedded assets (default):
-- `cargo run --release --bin webapp`
+Run locally:
+- `cargo run --release --bin webapp -- serve`
 
-Run in disk mode (live-edit `static_old/`):
-- `cargo run --release --bin webapp -- --assets disk`
-- `cargo run --release --bin webapp -- --use-disk`
+Choose a different port:
+- `cargo run --release --bin webapp -- serve --port 8080`
 
-Stats endpoint:
-- Temporarily disabled (kept in code, not routed).
+### Runtime Model
 
-### CLI (`webapp`)
-
-`webapp serve` is the explicit subcommand; running without a subcommand uses `serve` defaults.
-
-Flags:
-- `--port <u16>`: precedence is `--port`, then `PORT`, then `9327`.
-- `--host <host>`: bind host, default `0.0.0.0`.
-- `--assets <embedded|disk>`: default `embedded`.
-- `--use-disk`: shorthand for `--assets disk`.
-- `--static-dir <path>`: default `static_old`.
-- `--shutdown-timeout-seconds <u64>`: default `5`.
-
-### HTTP Behavior
-
-- `/stats` is currently disabled (kept for later re-enable).
+- Production path is embedded-only. There is no disk asset mode.
+- Assets are compiled into a generated manifest with:
+  - content type
+  - cache policy
+  - strong ETags
+  - Brotli and gzip variants for compressible files
+  - hashed immutable subresource URLs for CSS, manifest, and image assets
 - Static catch-all uses extensionless fallback:
   - exact path
   - `path.html`
   - `path/index.html`
-- `GET`/`HEAD` only on static and `/stats`; others return `405`
-- 404 negotiation:
-  - HTML accept (`text/html` / `application/xhtml+xml`) -> `404.html`
-  - JSON/ambiguous accept (`application/json`, `*/*`) -> `{"error":"not_found"}`
 
-### `/stats` JSON Schema (when re-enabled)
+### HTTP Surface
 
-```json
-{
-  "runtime": "rust/axum",
-  "memory": {
-    "rss": "12.34 MB",
-    "heap_used": "1.23 MB",
-    "heap_total": "4.56 MB"
-  }
-}
-```
+- Site routes: `GET` and `HEAD` only
+- Operational endpoints:
+  - `/healthz`
+  - `/readyz`
+- `/metrics`
+- Missing pages return the embedded `404.html` page with status `404`
+- Conditional requests use `ETag` / `If-None-Match`
+- Metrics are opt-in at runtime via `--enable-metrics`
 
-### Cache Policy
+### Security Headers
 
-- Images/fonts/css: `public, max-age=31536000, immutable`
-- JS: `public, max-age=86400`
-- HTML: `public, max-age=0, must-revalidate, stale-while-revalidate=30`
-- `/stats`: `no-store` (when enabled)
-
-### Security Headers (minimal baseline)
-
+- `Content-Security-Policy`
+- `X-Frame-Options: DENY`
 - `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: no-referrer-when-downgrade`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy`
+- `Cross-Origin-Resource-Policy: same-origin`
+- Optional `Strict-Transport-Security` via `--hsts-max-age`
 
-### `nob` Task Runner
+### CLI (`webapp`)
+
+Use the explicit `serve` command:
+- `webapp serve --port 9327`
+- `webapp serve --host 0.0.0.0`
+- `webapp serve --shutdown-timeout-seconds 5`
+- `webapp serve --hsts-max-age 31536000`
+- `webapp serve --enable-metrics`
+
+Port precedence:
+1. `--port`
+2. `PORT`
+3. `9327`
+
+### `nob` Workflow
 
 Use the root wrapper:
+- `./nob check`
 - `./nob run --port 9327`
-- `./nob build --output webapp`
-- `./nob restart-nohup --pull --log webapp.log`
-- `./nob pbr --service tzekid_website.service`
-- `./nob docker --repo tzekid/plosca.ru --tag latest`
-- `./nob self-build --output nob.bin`
+- `./nob build`
+- `./nob package`
+- `./nob daemon restart --build --port 9327`
+- `./nob daemon status`
+- `./nob daemon logs --follow`
+- `./nob service restart --service tzekid_website.service`
+- `./nob service status --service tzekid_website.service`
+- `./nob service logs --service tzekid_website.service --follow`
+- `./nob print-unit --service tzekid_website.service`
 
-### Docker
+Production deploy on the Linux VPS checkout:
+- `./nob daemon restart --build --port 9327`
 
-```bash
-docker compose up --build
-```
+That flow builds the Linux binary on-host, restarts the background process, and runs a smoke check against `/healthz` and `/`. Do not copy locally built binaries from macOS into production.
 
-Then open: <http://localhost:9327>
+### CI
+
+CI runs:
+- `cargo fmt --check`
+- `cargo clippy --all-targets -- -D warnings`
+- `cargo test`
+- `cargo build --release --bin webapp`

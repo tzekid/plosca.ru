@@ -20,6 +20,7 @@ target/
 # Misc
 nginx.conf
 *.fiber.gz
+dist/
 
 ploscaru
 webapp

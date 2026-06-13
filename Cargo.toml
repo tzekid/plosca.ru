@@ -2,6 +2,7 @@
 name = "ploscaru"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [lib]
 name = "ploscaru"
@@ -18,21 +19,21 @@ path = "src/bin/nob.rs"
 [dependencies]
 anyhow = "1"
 axum = "0.8"
-bytes = "1"
 clap = { version = "4", features = ["derive"] }
 http = "1"
-include_dir = "0.7"
 libc = "0.2"
-mime_guess = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+sha2 = "0.10"
 stats_alloc = "0.1"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "fs", "process", "time"] }
-tower-http = { version = "0.6", features = ["trace"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
+[build-dependencies]
+brotli = "8"
+flate2 = "1"
+mime_guess = "2"
+sha2 = "0.10"
+walkdir = "2"
+
 [dev-dependencies]
-regex = "1"
-tempfile = "3"
 tower = "0.5"
