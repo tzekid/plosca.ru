@@ -1,88 +1,54 @@
-## plosca.ru — embedded static site server
+## plosca.ru
 
-This repo builds a single self-contained Rust/Axum binary that serves the site from compile-time embedded assets in `static/`.
+Minimal Zig static file server for the files in `static/`.
 
-### Quick Start
+### Run
 
-Run locally:
-- `cargo run --release --bin webapp -- serve`
+```sh
+zig build run -- serve
+```
 
-Choose a different port:
-- `cargo run --release --bin webapp -- serve --port 8080`
+Choose a port:
 
-### Runtime Model
+```sh
+zig build run -- serve --port 8080
+```
 
-- Production path is embedded-only. There is no disk asset mode.
-- Assets are compiled into a generated manifest with:
-  - content type
-  - cache policy
-  - strong ETags
-  - Brotli and gzip variants for compressible files
-  - hashed immutable subresource URLs for CSS, manifest, and image assets
-- Static catch-all uses extensionless fallback:
-  - exact path
-  - `path.html`
-  - `path/index.html`
+Build the binary:
 
-### HTTP Surface
+```sh
+zig build -Doptimize=ReleaseFast
+```
 
-- Site routes: `GET` and `HEAD` only
-- Operational endpoints:
-  - `/healthz`
-  - `/readyz`
-- `/metrics`
-- Missing pages return the embedded `404.html` page with status `404`
-- Conditional requests use `ETag` / `If-None-Match`
-- Metrics are opt-in at runtime via `--enable-metrics`
+The installed binary is written to `zig-out/bin/webapp`.
 
-### Security Headers
+### CLI
 
-- `Content-Security-Policy`
-- `X-Frame-Options: DENY`
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy`
-- `Cross-Origin-Resource-Policy: same-origin`
-- Optional `Strict-Transport-Security` via `--hsts-max-age`
-
-### CLI (`webapp`)
-
-Use the explicit `serve` command:
-- `webapp serve --port 9327`
-- `webapp serve --host 0.0.0.0`
-- `webapp serve --shutdown-timeout-seconds 5`
-- `webapp serve --hsts-max-age 31536000`
-- `webapp serve --enable-metrics`
+```sh
+webapp serve [--host 0.0.0.0] [--port 9327] [--static-root static]
+```
 
 Port precedence:
+
 1. `--port`
 2. `PORT`
 3. `9327`
 
-### `nob` Workflow
+### Routing
 
-Use the root wrapper:
-- `./nob check`
-- `./nob run --port 9327`
-- `./nob build`
-- `./nob package`
-- `./nob daemon restart --build --port 9327`
-- `./nob daemon status`
-- `./nob daemon logs --follow`
-- `./nob service restart --service tzekid_website.service`
-- `./nob service status --service tzekid_website.service`
-- `./nob service logs --service tzekid_website.service --follow`
-- `./nob print-unit --service tzekid_website.service`
+The server handles `GET` and `HEAD` only. Other methods return `405`.
 
-Production deploy on the Linux VPS checkout:
-- `./nob daemon restart --build --port 9327`
+Static lookup stays under `static/` and tries:
 
-That flow builds the Linux binary on-host, restarts the background process, and runs a smoke check against `/healthz` and `/`. Do not copy locally built binaries from macOS into production.
+1. exact path
+2. `path.html`
+3. `path/index.html`
 
-### CI
+Missing files return `static/404.html` with status `404` when that file exists.
 
-CI runs:
-- `cargo fmt --check`
-- `cargo clippy --all-targets -- -D warnings`
-- `cargo test`
-- `cargo build --release --bin webapp`
+### Test
+
+```sh
+zig build test
+zig build
+```

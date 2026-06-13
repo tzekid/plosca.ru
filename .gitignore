@@ -1,5 +1,6 @@
 # OS/editor
 .DS_Store
+._*
 .idea/
 .vscode/
 
@@ -20,6 +21,9 @@ target/
 # Misc
 nginx.conf
 *.fiber.gz
+*.pid
+*.bak.*
+*.new
 dist/
 
 ploscaru
@@ -27,4 +31,6 @@ webapp
 nob
 
 .zig-cache
+.zig-cache/
 zig-out
+zig-out/

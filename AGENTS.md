@@ -1,50 +1,24 @@
 # Repository Guidelines
 
-These guidelines describe structure, runtime modes, routing behavior, security posture, and contribution workflow for the `plosca.ru` Rust/Axum static site server.
+This repository builds a minimal Zig static file server for `plosca.ru`.
 
 ## Overview
 
-The production binary is `webapp`, built from this Rust crate.
+The production binary is `webapp`.
 
 Key characteristics:
-- Axum-based HTTP server.
-- Embedded static assets by default via `include_dir!`.
-- Optional disk mode (`--assets disk` or `--use-disk`) for live iteration.
+- Zig-based HTTP server using the standard library.
+- Serves files from on-disk `static/`.
 - Extensionless path resolution with `.html` and `index.html` fallbacks.
-- `GET` and `HEAD` only for routed endpoints; other methods return `405`.
-- Minimal security headers (`nosniff`, `Referrer-Policy`) and explicit cache policy by file type.
-- Accept-aware 404 responses:
-  - HTML accept -> `404.html`
-  - JSON or ambiguous (`*/*`) -> `{"error":"not_found"}`
-
-## Runtime Modes
-
-Two mutually exclusive modes are selected at startup:
-
-1. Embedded Mode (default)
-   - Uses compile-time embedded `static_old/` assets.
-   - No runtime asset directory dependency.
-
-2. Disk Mode (`--assets disk` / `--use-disk`)
-   - Serves from on-disk `static_old/`.
-   - Canonical-path guard prevents traversal outside static root.
+- `GET` and `HEAD` only; other methods return `405`.
+- Traversal outside `static/` is rejected.
 
 ## Project Structure
 
-- `Cargo.toml`, `Cargo.lock`: Rust crate + dependency lock.
-- `src/main.rs`: `webapp` binary entrypoint.
-- `src/lib.rs`: shared modules and global allocator instrumentation.
-- `src/config.rs`: CLI and runtime config resolution.
-- `src/server.rs`: listener setup and graceful shutdown.
-- `src/routes.rs`: route registration and response behavior.
-- `src/static_files.rs`: embedded/disk static resolution + cache/content-type.
-- `src/stats.rs`: runtime memory stats payload (endpoint currently disabled).
-- `src/error_response.rs`: 404 negotiation helpers.
-- `src/bin/nob.rs`: Rust task runner.
-- `nob`: root launcher wrapper for `target/release/nob`.
-- `tests/server.rs`: integration tests.
-- `static_old/`: static assets.
-- `Dockerfile`, `docker-compose.yml`: container build/run.
+- `build.zig`: Zig build, run, and test steps.
+- `src/main.zig`: CLI, listener, routing, static file resolution, and tests.
+- `static/`: site files.
+- `.github/workflows/ci.yml`: Zig format/test/build CI.
 
 ## Build, Run, and Ports
 
@@ -54,47 +28,22 @@ Port precedence:
 3. Default `9327`
 
 Commands:
-- Run (embedded): `cargo run --release --bin webapp`
-- Run (disk): `cargo run --release --bin webapp -- --use-disk`
-- Build app: `cargo build --release --bin webapp`
-- Build task runner: `cargo build --release --bin nob`
-- Test: `cargo test`
-- Docker: `docker compose up --build`
+- Run: `zig build run -- serve`
+- Run on another port: `zig build run -- serve --port 8080`
+- Build: `zig build -Doptimize=ReleaseFast`
+- Test: `zig build test`
 
-Task-runner commands:
-- `./nob run --port 9327`
-- `./nob build --output webapp`
-- `./nob restart-nohup --pull --log webapp.log`
-- `./nob pbr --service tzekid_website.service`
-- `./nob docker --repo tzekid/plosca.ru --tag latest`
+The built binary is `zig-out/bin/webapp`.
 
-## Routing + API Contract
+## Routing Contract
 
-- `/stats` is currently disabled (code retained for later re-enable).
-- Static routes: `GET`/`HEAD` catch-all with candidate order:
-  1. exact path
-  2. `path.html` (if extensionless)
-  3. `path/index.html` (if extensionless)
-- `/stats` schema:
-  - `runtime: "rust/axum"`
-  - `memory.rss`, `memory.heap_used`, `memory.heap_total` as `"N.NN MB"`
+Static routes use this candidate order:
+1. exact path
+2. `path.html`
+3. `path/index.html`
 
-## Cache Policy
+Missing files return `static/404.html` with status `404` when available.
 
-- Images/fonts/css: `public, max-age=31536000, immutable`
-- JS: `public, max-age=86400`
-- HTML: `public, max-age=0, must-revalidate, stale-while-revalidate=30`
-- `/stats`: `no-store` (when enabled)
+## Notes
 
-## Security Headers
-
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: no-referrer-when-downgrade`
-
-## Roadmap / Consider
-
-- Stronger cache validators (`ETag`/`Last-Modified`) if needed.
-- Optional configurable CSP policy.
-- Prometheus metrics.
-- CI pipeline (`fmt`, `clippy`, `test`, release build).
-- Optional pre-compressed static asset serving.
+There is no asset embedding, generated manifest, metrics endpoint, Docker setup, or Rust task runner in the simplified Zig version.
