@@ -30,6 +30,29 @@ for (const pageCase of pages) {
   });
 }
 
+const centeredArticlePages = [
+  { name: "about", path: "/about", selector: "article.about-page" },
+  { name: "hello-world", path: "/hello_world", selector: "main > article" },
+  { name: "prose", path: "/prose", selector: "main > article" },
+];
+
+for (const pageCase of centeredArticlePages) {
+  test(`${pageCase.name} article column is centered`, async ({ page }) => {
+    await page.route("**/plausible.plosca.ru/**", (route) => route.abort());
+    const response = await page.goto(pageCase.path);
+    expect(response?.status()).toBe(200);
+    await page.evaluate(() => document.fonts.ready);
+
+    const delta = await page.locator(pageCase.selector).evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const articleCenter = rect.left + rect.width / 2;
+      return Math.abs(articleCenter - window.innerWidth / 2);
+    });
+
+    expect(delta).toBeLessThanOrEqual(2);
+  });
+}
+
 test("mobile navigation opens", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/plausible.plosca.ru/**", (route) => route.abort());

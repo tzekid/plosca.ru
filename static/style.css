@@ -185,6 +185,15 @@
   .nav {
     padding: calc(var(--spacing) * 2);
   }
+  .nav::after {
+    clear: both;
+    content: "";
+    display: table;
+  }
+  main {
+    width: 100%;
+    clear: both;
+  }
   .logo {
     float: left;
     margin-left: calc(var(--spacing) * 8);

@@ -152,6 +152,17 @@
         @apply p-2;
     }
 
+    .nav::after {
+        clear: both;
+        content: "";
+        display: table;
+    }
+
+    main {
+        @apply w-full;
+        clear: both;
+    }
+
     .logo {
         @apply float-left ml-8 p-2;
         margin-top: 2px;
