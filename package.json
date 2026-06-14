@@ -1,0 +1,22 @@
+{
+  "name": "plosca.ru",
+  "version": "1.0.0",
+  "description": "Minimal Zig static file server for the files in `static/`.",
+  "private": true,
+  "scripts": {
+    "css:build": "npx @tailwindcss/cli -i ./src/styles/input.css -o ./static/style.css",
+    "css:watch": "npx @tailwindcss/cli -i ./src/styles/input.css -o ./static/style.css --watch",
+    "screenshots:before": "node ./scripts/capture-screenshots.mjs before",
+    "screenshots:after": "node ./scripts/capture-screenshots.mjs after",
+    "screenshots:compare": "node ./scripts/compare-screenshots.mjs",
+    "test:visual": "npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@tailwindcss/cli": "^4.3.1",
+    "@tailwindcss/typography": "^0.5.20",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "tailwindcss": "^4.3.1"
+  }
+}

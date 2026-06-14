@@ -63,9 +63,30 @@ oha http://127.0.0.1:9327/
 wrk http://127.0.0.1:9327/style.css
 ```
 
+### Frontend CSS
+
+The frontend remains static HTML. Tailwind CSS is used only at build time to generate `static/style.css` from `src/styles/input.css`.
+
+```sh
+npm ci
+npm run css:build
+npm run css:watch
+```
+
+Screenshot review artifacts are local/CI-only:
+
+```sh
+npm run screenshots:before
+npm run screenshots:after
+npm run screenshots:compare
+npm run test:visual
+```
+
 ### Test
 
 ```sh
+npm run css:build
+npm run test:visual
 zig build test
 zig build
 ```
