@@ -467,7 +467,7 @@ body {
     width: 100%;
     height: 100vh;
     /* font-family: Poppins; */
-    font-family: "Quicksand";
+    font-family: "Quicksand", Arial, Helvetica, sans-serif;
     font-weight: 400;
     /* background: url(background-img.jpg);
     */
@@ -693,6 +693,28 @@ body {
     display: none;
 }
 
+@media screen and (max-width: 864px) {
+    .hidden {
+        display: block;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+}
+
+a:focus-visible,
+#nav:focus-visible+.nav-btn {
+    outline: 2px solid #d64937;
+    outline-offset: 4px;
+}
+
 /* change
 .fadeOut{
     visibility: hidden;
@@ -884,11 +906,6 @@ article h1 {
 article h2 {
     font-size: 2em;
     margin-top: 64px;
-}
-
-article h3 {
-    font-size: 1.55em;
-    margin-top: 42px;
 }
 
 article h3 {

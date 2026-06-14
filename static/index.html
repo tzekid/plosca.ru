@@ -25,11 +25,11 @@
 </head>
 
 <body>
-    <a name="top"></a>
+    <span id="top" aria-hidden="true"></span>
 
     <div class="container">
-        <nav class="nav">
-            <input type="checkbox" id="nav" class="hidden" />
+        <nav class="nav" aria-label="Primary">
+            <input type="checkbox" id="nav" class="hidden" aria-label="Toggle navigation" aria-controls="primary-navigation" />
             <label for="nav" class="nav-btn">
                 <i></i>
                 <i></i>
@@ -39,7 +39,7 @@
                 <!-- <a href="/"><{ tzekid }></a> -->
                 <a href="/">&lt;{ x }&gt;</a>
             </div>
-            <div class="nav-wrapper">
+            <div class="nav-wrapper" id="primary-navigation">
                 <ul>
                     <li><a href="/">Home</a></li>
                     <li><a href="/about">About</a></li>
