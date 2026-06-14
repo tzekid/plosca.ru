@@ -65,28 +65,30 @@ wrk http://127.0.0.1:9327/style.css
 
 ### Frontend CSS
 
-The frontend remains static HTML. Tailwind CSS is used only at build time to generate `static/style.css` from `src/styles/input.css`. `npm run css:build` also updates the `?v=` stylesheet query in static HTML files so browsers do not keep an old immutable CSS response.
+The frontend remains static HTML with no Node, npm, CSS framework, or browser-test dependency in the committed build path. Author CSS in `src/styles/site.css`, then generate the served stylesheet and update the `?v=` stylesheet query in static HTML files:
 
 ```sh
-npm ci
-npm run css:build
-npm run css:watch
+zig build css
 ```
 
-Screenshot review artifacts are local/CI-only:
+Check that generated CSS, stylesheet cache-busters, and local asset references are synchronized:
 
 ```sh
-npm run screenshots:before
-npm run screenshots:after
-npm run screenshots:compare
-npm run test:visual
+zig build check-site
 ```
 
 ### Test
 
 ```sh
-npm run css:build
-npm run test:visual
+zig build css
+zig build check-site
 zig build test
-zig build
+zig build -Doptimize=ReleaseFast
+./scripts/smoke.sh
+```
+
+To smoke an existing deployment instead of starting a temporary local server:
+
+```sh
+PLOSCA_BASE_URL=https://plosca.ru ./scripts/smoke.sh
 ```

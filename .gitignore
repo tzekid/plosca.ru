@@ -4,12 +4,6 @@
 .idea/
 .vscode/
 
-# Node / frontend tooling
-node_modules/
-playwright-report/
-test-results/
-artifacts/css-migration/
-
 # Go build artifacts
 
 *.exe

@@ -35,4 +35,24 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);
+
+    const site_tool_mod = b.createModule(.{
+        .root_source_file = b.path("src/tools/site.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const site_tool = b.addExecutable(.{
+        .name = "site-tool",
+        .root_module = site_tool_mod,
+    });
+
+    const css_cmd = b.addRunArtifact(site_tool);
+    css_cmd.addArg("write");
+    const css_step = b.step("css", "Generate static/style.css and update HTML cache-busters");
+    css_step.dependOn(&css_cmd.step);
+
+    const check_site_cmd = b.addRunArtifact(site_tool);
+    check_site_cmd.addArg("check");
+    const check_site_step = b.step("check-site", "Check generated CSS, cache-busters, and local asset references");
+    check_site_step.dependOn(&check_site_cmd.step);
 }

@@ -264,6 +264,17 @@ fn respondStaticFile(
     }
     try addSecurityHeaders(&headers, state.hsts_max_age, &hsts_buf);
 
+    if (request.head.method == .HEAD) {
+        var content_length_buf: [32]u8 = undefined;
+        headers.add("content-length", try std.fmt.bufPrint(&content_length_buf, "{d}", .{resolved.stat.size}));
+        return request.respond("", .{
+            .status = status,
+            .keep_alive = false,
+            .transfer_encoding = .none,
+            .extra_headers = headers.slice(),
+        });
+    }
+
     var stream_buffer: [8192]u8 = undefined;
     var body = try request.respondStreaming(&stream_buffer, .{
         .content_length = resolved.stat.size,
@@ -273,10 +284,8 @@ fn respondStaticFile(
         },
     });
 
-    if (request.head.method != .HEAD) {
-        var file_reader: Io.File.Reader = .initSize(file, io, &.{}, resolved.stat.size);
-        _ = try body.writer.sendFileAll(&file_reader, .limited64(resolved.stat.size));
-    }
+    var file_reader: Io.File.Reader = .initSize(file, io, &.{}, resolved.stat.size);
+    _ = try body.writer.sendFileAll(&file_reader, .limited64(resolved.stat.size));
     try body.end();
 }
 
