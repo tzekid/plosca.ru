@@ -16,7 +16,7 @@ Key characteristics:
 ## Project Structure
 
 - `build.zig`: Zig build, run, and test steps.
-- `src/main.zig`: CLI, listener, routing, static file resolution, and tests.
+- `src/main.zig`: CLI, listener, routing, streaming static file responses, cache validators, and tests.
 - `static/`: site files.
 - `.github/workflows/ci.yml`: Zig format/test/build CI.
 
@@ -30,6 +30,7 @@ Port precedence:
 Commands:
 - Run: `zig build run -- serve`
 - Run on another port: `zig build run -- serve --port 8080`
+- Run with HSTS: `zig build run -- serve --hsts-max-age 31536000`
 - Build: `zig build -Doptimize=ReleaseFast`
 - Test: `zig build test`
 
@@ -46,4 +47,4 @@ Missing files return `static/404.html` with status `404` when available.
 
 ## Notes
 
-There is no asset embedding, generated manifest, metrics endpoint, Docker setup, or Rust task runner in the simplified Zig version.
+There is no asset embedding, generated manifest, metrics endpoint, Docker setup, or Rust task runner. The server streams from disk, emits cache validators, and can serve `.br`/`.gz` siblings when present.
