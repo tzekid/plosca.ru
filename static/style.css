@@ -45,6 +45,9 @@
   }
 }
 @layer utilities {
+  .visible {
+    visibility: visible;
+  }
   .static {
     position: static;
   }
@@ -1356,10 +1359,10 @@
       justify-content: flex-start;
     }
     .article:first-of-type {
-      margin-top: 38px;
+      margin-top: 54px;
     }
-    .article span {
-      display: none;
+    .article:last-of-type {
+      padding-bottom: 46px;
     }
     img {
       width: 100%;

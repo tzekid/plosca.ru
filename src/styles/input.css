@@ -1104,11 +1104,11 @@
         }
 
         .article:first-of-type {
-            margin-top: 38px;
+            margin-top: 54px;
         }
 
-        .article span {
-            @apply hidden;
+        .article:last-of-type {
+            padding-bottom: 46px;
         }
 
         img {

@@ -68,3 +68,13 @@ test("mobile navigation opens", async ({ page }, testInfo) => {
     animations: "disabled",
   });
 });
+
+test("mobile home overview keeps article date visible", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/plausible.plosca.ru/**", (route) => route.abort());
+  const response = await page.goto("/");
+  expect(response?.status()).toBe(200);
+  await page.evaluate(() => document.fonts.ready);
+
+  await expect(page.locator(".home-box .a-date", { hasText: "1 January 2019" })).toBeVisible();
+});
