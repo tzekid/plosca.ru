@@ -4,7 +4,8 @@
   "description": "Minimal Zig static file server for the files in `static/`.",
   "private": true,
   "scripts": {
-    "css:build": "npx @tailwindcss/cli -i ./src/styles/input.css -o ./static/style.css",
+    "css:build": "npx @tailwindcss/cli -i ./src/styles/input.css -o ./static/style.css && node ./scripts/update-style-version.mjs",
+    "css:version": "node ./scripts/update-style-version.mjs",
     "css:watch": "npx @tailwindcss/cli -i ./src/styles/input.css -o ./static/style.css --watch",
     "screenshots:before": "node ./scripts/capture-screenshots.mjs before",
     "screenshots:after": "node ./scripts/capture-screenshots.mjs after",

@@ -65,7 +65,7 @@ wrk http://127.0.0.1:9327/style.css
 
 ### Frontend CSS
 
-The frontend remains static HTML. Tailwind CSS is used only at build time to generate `static/style.css` from `src/styles/input.css`.
+The frontend remains static HTML. Tailwind CSS is used only at build time to generate `static/style.css` from `src/styles/input.css`. `npm run css:build` also updates the `?v=` stylesheet query in static HTML files so browsers do not keep an old immutable CSS response.
 
 ```sh
 npm ci

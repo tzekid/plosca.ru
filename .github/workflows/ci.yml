@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run css:build
-      - run: git diff --exit-code static/style.css
+      - run: git diff --exit-code static/style.css static/*.html
       - run: zig fmt --check build.zig src/main.zig
       - run: zig build test
       - run: zig build -Doptimize=ReleaseFast

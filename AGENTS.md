@@ -35,7 +35,7 @@ Commands:
 - Run with HSTS: `zig build run -- serve --hsts-max-age 31536000`
 - Build: `zig build -Doptimize=ReleaseFast`
 - Test: `zig build test`
-- Build CSS: `npm run css:build`
+- Build CSS and update HTML stylesheet cache-busters: `npm run css:build`
 - Watch CSS: `npm run css:watch`
 - Visual smoke: `npm run test:visual`
 - Screenshot review: `npm run screenshots:before`, `npm run screenshots:after`, `npm run screenshots:compare`
