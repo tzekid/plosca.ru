@@ -6,6 +6,32 @@ Source snapshot: `gwern/gwern.net@075c69a321c44a84b582af6967f6a40a6507a6e9`
 
 Local source clone used for this review: `/home/kid/Projects/gwern.net-source`
 
+## Implementation Tracker
+
+Goal started: 2026-06-14 UTC
+
+Tracking rule: each item below is planned, implemented, verified, committed, pushed, and published before moving to the next coherent slice. "Published" means the disk-backed production site has the updated static files or, for server/build changes, the deployed binary/process has been refreshed and live-smoked.
+
+Scope note: large Gwern.net features are implemented in a `plosca.ru`-scaled form: static-first, Zig-build-generated where possible, and minimal first-party JavaScript only where the feature needs runtime behavior. Local external-link archiving will not commit third-party page copies into this repo; the implementation should preserve link metadata and local recovery pages without importing copyrighted external content.
+
+| Item | Scope | Status | Implementation notes | Verification | Commit / publish |
+| --- | --- | --- | --- | --- | --- |
+| Article metadata manifest | quick win | pending | Add a small source-of-truth page manifest for title, route, description, date, tags, and related links. | `zig build check-site`, generated output diff | pending |
+| Content quality checks | quick win | pending | Extend `zig build check-site` with title/description, IDs, duplicate IDs, empty anchors, and metadata checks. | `zig build check-site` | pending |
+| Heading self-links | quick win | pending | Add accessible heading permalink affordances without requiring JS. | screenshot/smoke, `zig build check-site` | pending |
+| Better 404 recovery | quick win | pending | Improve 404 with route recovery links and page-specific copy. | local and deployed missing-route smoke | pending |
+| Article related links | quick win | pending | Add small related/connection blocks to article pages. | `zig build check-site`, visual smoke | pending |
+| Keep theme simple | quick win | pending | Preserve current session-lifetime theme implementation and document it as intentionally not Gwern-toolbar-style. | `zig build check-site`, theme smoke | pending |
+| Generated backlinks | medium | pending | Generate local backlink snippets from static HTML links. | generated snippet checks | pending |
+| CSS-only sidenotes | medium | pending | Add footnote/sidenote styles that degrade to normal footnotes. | visual smoke in article pages | pending |
+| Native collapses | medium | pending | Add styled `<details>` support for future appendices/code output. | visual smoke and keyboard behavior | pending |
+| Markdown/text alternates | medium | pending | Generate or serve text/Markdown alternates for article pages. | curl alternate files and check-site references | pending |
+| Link-type markers | medium | pending | Add unobtrusive external/PDF/archive markers. | visual smoke and contrast check | pending |
+| Annotation DB and previews | large | pending | Generate a small annotation database and first-party hover/focus previews. | JS/no-JS smoke, asset check | pending |
+| Client-side transclusion | large | pending | Add a minimal fragment transclusion utility with no required dependency. | transclusion fragment smoke | pending |
+| Similar-link generation | large | pending | Generate similar links from metadata/body terms. | deterministic generated output check | pending |
+| Local external-link archive registry | large | pending | Generate local archive metadata/recovery pages without committing external page copies. | archive page/link checks | pending |
+
 Primary live sources:
 
 - [gwern.net/about](https://gwern.net/about)
