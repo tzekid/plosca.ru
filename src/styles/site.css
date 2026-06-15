@@ -1153,11 +1153,20 @@
     display: none;
   }
   .link-preview--interactive {
-    max-height: min(14rem, calc(100vh - 2rem));
+    max-height: min(15rem, calc(100vh - 2rem));
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding: 1.05rem 1.15rem;
     scrollbar-color: var(--color-code-scrollbar) transparent;
     scrollbar-width: thin;
+  }
+  .link-preview--wikipedia,
+  .link-preview--article {
+    border-left-width: 3px;
+  }
+  .link-preview--interactive strong {
+    font-family: var(--font-display);
+    font-size: 1.02rem;
   }
   .link-preview--article {
     max-height: min(12rem, calc(100vh - 2rem));

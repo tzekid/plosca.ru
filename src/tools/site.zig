@@ -21,6 +21,8 @@ const archive_index_path = "static/archive/index.html";
 const max_file_size = 16 * 1024 * 1024;
 const max_fetch_size = 2 * 1024 * 1024;
 const link_summary_limit = 360;
+const internal_summary_limit = 1000;
+const wikipedia_summary_limit = 1200;
 const link_title_limit = 140;
 const curl_user_agent = "plosca.ru-link-enricher/1.0 (+https://plosca.ru/about)";
 
@@ -699,7 +701,7 @@ fn renderAnnotationsJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
         const html = try readStaticFile(io, gpa, page.file);
         defer gpa.free(html);
         const main_html = extractElement(html, "main") orelse html;
-        try appendAnnotationsFromHtml(gpa, &out, &seen, page, main_html, &count, if (link_context) |*parsed| &parsed.value else null);
+        try appendAnnotationsFromHtml(io, gpa, &out, &seen, page, main_html, &count, if (link_context) |*parsed| &parsed.value else null);
     }
     try out.appendSlice(gpa, "\n  ]\n}\n");
     return try out.toOwnedSlice(gpa);
@@ -729,6 +731,7 @@ fn renderExternalLinksJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
 }
 
 fn appendAnnotationsFromHtml(
+    io: Io,
     gpa: std.mem.Allocator,
     out: *std.ArrayList(u8),
     seen: *std.ArrayList([]u8),
@@ -772,13 +775,14 @@ fn appendAnnotationsFromHtml(
 
         try seen.append(gpa, try gpa.dupe(u8, href));
         if (count.* != 0) try out.appendSlice(gpa, ",\n");
-        try appendAnnotationObject(gpa, out, page, href, text, link_context);
+        try appendAnnotationObject(io, gpa, out, page, href, text, link_context);
         count.* += 1;
         search_pos = close.end;
     }
 }
 
 fn appendAnnotationObject(
+    io: Io,
     gpa: std.mem.Allocator,
     out: *std.ArrayList(u8),
     source_page: PageMeta,
@@ -795,8 +799,17 @@ fn appendAnnotationObject(
     try appendJsonField(gpa, out, "source", source_page.route, true);
     try appendJsonField(gpa, out, "source_title", source_page.title, true);
     if (pageByRoute(href)) |target| {
+        const summary = try internalPageSummary(io, gpa, target);
+        defer gpa.free(summary);
+        const context_kind = switch (target.kind) {
+            .article, .prose => "article",
+            else => "internal",
+        };
         try appendJsonField(gpa, out, "title", target.title, true);
-        try appendJsonField(gpa, out, "summary", target.description, false);
+        try appendJsonField(gpa, out, "summary", summary, true);
+        if (target.date) |date| try appendJsonField(gpa, out, "date", date, true);
+        try appendJsonField(gpa, out, "site_name", "plosca.ru", true);
+        try appendJsonField(gpa, out, "context_kind", context_kind, false);
     } else if (std.mem.eql(u8, kind, "external")) {
         try appendExternalAnnotation(gpa, out, href, trimmed_text, link_context);
     } else {
@@ -804,6 +817,58 @@ fn appendAnnotationObject(
         try appendJsonField(gpa, out, "summary", "Static asset or local route.", false);
     }
     try out.appendSlice(gpa, "    }");
+}
+
+fn internalPageSummary(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    const html = try readStaticFile(io, gpa, page.file);
+    defer gpa.free(html);
+
+    const article = extractElement(html, "article") orelse html;
+    var body = article;
+    if (std.mem.indexOf(u8, body, "</header>")) |header_end| {
+        body = body[header_end + "</header>".len ..];
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"article-links\"")) |section_start| {
+        body = body[0..section_start];
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"generated-section\"")) |section_start| {
+        body = body[0..section_start];
+    }
+
+    const paragraphs = try articleParagraphPreviewText(gpa, body);
+    defer gpa.free(paragraphs);
+    if (std.mem.trim(u8, paragraphs, " \t\r\n").len == 0) {
+        return try gpa.dupe(u8, page.description);
+    }
+    return try normalizePreviewText(gpa, paragraphs, internal_summary_limit);
+}
+
+fn articleParagraphPreviewText(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var search_pos: usize = 0;
+    var paragraph_count: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<p")) |paragraph_start| {
+        const tag_end = std.mem.indexOfScalarPos(u8, html, paragraph_start, '>') orelse break;
+        const tag = html[paragraph_start..tag_end];
+        const close = findClosingTag(html, tag_end + 1, "p") orelse break;
+        search_pos = close.end;
+
+        if (std.mem.indexOf(u8, tag, "class=\"date\"") != null) continue;
+
+        const text = try htmlText(gpa, html[tag_end + 1 .. close.start]);
+        defer gpa.free(text);
+        const trimmed = std.mem.trim(u8, text, " \t\r\n");
+        if (trimmed.len == 0) continue;
+
+        if (out.items.len != 0) try out.appendSlice(gpa, "\n\n");
+        try out.appendSlice(gpa, trimmed);
+        paragraph_count += 1;
+        if (out.items.len >= internal_summary_limit or paragraph_count >= 4) break;
+    }
+
+    return try out.toOwnedSlice(gpa);
 }
 
 fn appendExternalAnnotation(
@@ -1220,7 +1285,7 @@ fn contextFromWikipediaSummary(
         .status = "ok",
         .kind = "wikipedia",
         .title = try normalizePreviewText(gpa, raw_title, link_title_limit),
-        .summary = try normalizePreviewText(gpa, raw_summary, link_summary_limit),
+        .summary = try normalizePreviewText(gpa, raw_summary, wikipedia_summary_limit),
         .site_name = try gpa.dupe(u8, "Wikipedia"),
         .canonical_url = try gpa.dupe(u8, canonical),
         .source_url = try gpa.dupe(u8, summary_url),
@@ -1250,7 +1315,7 @@ fn contextFromWikipediaExtract(
             .status = "ok",
             .kind = "wikipedia",
             .title = try normalizePreviewText(gpa, raw_title, link_title_limit),
-            .summary = try normalizePreviewText(gpa, raw_summary, link_summary_limit),
+            .summary = try normalizePreviewText(gpa, raw_summary, wikipedia_summary_limit),
             .site_name = try gpa.dupe(u8, "Wikipedia"),
             .canonical_url = try gpa.dupe(u8, url),
             .source_url = try gpa.dupe(u8, extract_url),

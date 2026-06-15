@@ -94,7 +94,7 @@
         const box = ensurePreview();
         const rect = anchor.getBoundingClientRect();
         const margin = 14;
-        const width = Math.min(390, window.innerWidth - margin * 2);
+        const width = Math.min(activeInteractive ? 540 : 390, window.innerWidth - margin * 2);
         box.style.maxWidth = `${width}px`;
 
         const previewRect = box.getBoundingClientRect();
@@ -128,10 +128,11 @@
         box.classList.toggle("link-preview--article", annotation.kind === "internal");
         box.classList.toggle("link-preview--wikipedia", annotation.context_kind === "wikipedia");
         const source = escapeHtml(annotation.site_name || annotation.context_kind || annotation.kind || "link");
+        const date = annotation.date ? escapeHtml(formatDate(annotation.date)) : "";
         const archive = annotation.archive
             ? `<a href="${escapeHtml(annotation.archive)}">archive record</a>`
             : "";
-        const meta = [source, archive].filter(Boolean).join(" · ");
+        const meta = [source, date, archive].filter(Boolean).join(" · ");
         box.innerHTML = `
             <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
             <span>${escapeHtml(annotation.summary || annotation.href)}</span>
@@ -147,6 +148,19 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+
+    const formatDate = (value) => {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+        if (!match) return value;
+        const date = new Date(`${value}T00:00:00Z`);
+        if (Number.isNaN(date.valueOf())) return value;
+        return date.toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC",
+        });
+    };
 
     const initAnnotations = () => {
         const anchors = document.querySelectorAll("main a[href]:not(.heading-anchor):not(.up-btn)");

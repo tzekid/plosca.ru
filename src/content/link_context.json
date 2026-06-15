@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-15T08:44:27Z",
+  "updated_at": "2026-06-15T11:15:37Z",
   "links": {
     "https://www.linkedin.com/in/mircea-ilie-ploscaru/": {
       "status": "ok",
@@ -10,7 +10,7 @@
       "site_name": "linkedin.com",
       "canonical_url": "https://de.linkedin.com/in/mircea-ilie-ploscaru",
       "source_url": "https://www.linkedin.com/in/mircea-ilie-ploscaru/",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://github.com/tzekid": {
       "status": "ok",
@@ -20,7 +20,7 @@
       "site_name": "GitHub",
       "canonical_url": "https://github.com/tzekid",
       "source_url": "https://github.com/tzekid",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://www.staticgen.com/": {
       "status": "ok",
@@ -30,27 +30,27 @@
       "site_name": "Jamstack.org",
       "canonical_url": "https://jamstack.org/generators/",
       "source_url": "https://www.staticgen.com/",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://en.wikipedia.org/wiki/Reinventing_the_wheel": {
       "status": "ok",
       "kind": "wikipedia",
       "title": "Reinventing the wheel",
-      "summary": "To reinvent the wheel is to attempt to duplicate—most likely with inferior results—a basic method that has already previously been created or optimized by others. The inspiration for this idiomatic metaphor is that the wheel is an ancient archetype of human ingenuity. As it has already been invented and is not considered to have any inherent flaws, an at...",
+      "summary": "To reinvent the wheel is to attempt to duplicate—most likely with inferior results—a basic method that has already previously been created or optimized by others. The inspiration for this idiomatic metaphor is that the wheel is an ancient archetype of human ingenuity. As it has already been invented and is not considered to have any inherent flaws, an attempt to reinvent it would add no value to it and be a waste of time, diverting the investigator's resources from possibly more worthy goals.",
       "site_name": "Wikipedia",
       "canonical_url": "https://en.wikipedia.org/wiki/Reinventing_the_wheel",
       "source_url": "https://en.wikipedia.org/api/rest_v1/page/summary/Reinventing_the_wheel",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://en.wikipedia.org/wiki/KISS_principle": {
       "status": "ok",
       "kind": "wikipedia",
       "title": "KISS principle",
-      "summary": "KISS is a design principle first noted by the U.S. Navy in 1960. First seen partly in American English by at least 1938, KISS implies that simplicity should be a design goal. The phrase has been associated with aircraft engineer Kelly Johnson. The term \"KISS principle\" was in popular use by 1970. Variations on the phrase include \"keep it super simple\", \"keep...",
+      "summary": "KISS is a design principle first noted by the U.S. Navy in 1960. First seen partly in American English by at least 1938, KISS implies that simplicity should be a design goal. The phrase has been associated with aircraft engineer Kelly Johnson. The term \"KISS principle\" was in popular use by 1970. Variations on the phrase include \"keep it super simple\", \"keep it simple, silly\", \"keep it short and simple\", \"keep it short and sweet\", \"keep it simple and straightforward\", \"keep it small and simple\", \"keep it simple, soldier\", \"keep it simple, sailor\", \"keep it simple, sweetie\", \"keep it stupidly simple\", or \"keep it sweet and simple\".",
       "site_name": "Wikipedia",
       "canonical_url": "https://en.wikipedia.org/wiki/KISS_principle",
       "source_url": "https://en.wikipedia.org/api/rest_v1/page/summary/KISS_principle",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://pandoc.org/demos.html": {
       "status": "ok",
@@ -60,7 +60,7 @@
       "site_name": "Pandoc",
       "canonical_url": "https://pandoc.org/demos.html",
       "source_url": "https://pandoc.org/demos.html",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://youtu.be/bkgeFi4PwOg": {
       "status": "ok",
@@ -70,7 +70,7 @@
       "site_name": "YouTube",
       "canonical_url": "https://youtu.be/bkgeFi4PwOg",
       "source_url": "https://www.youtube.com/oembed?url=https%3A%2F%2Fyoutu.be%2FbkgeFi4PwOg&format=json",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "http://eradman.com/entrproject/": {
       "status": "ok",
@@ -80,7 +80,7 @@
       "site_name": "eradman.com",
       "canonical_url": "http://eradman.com/entrproject/",
       "source_url": "http://eradman.com/entrproject/",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     },
     "https://en.wikipedia.org/wiki/Wc_(Unix)": {
       "status": "ok",
@@ -90,7 +90,7 @@
       "site_name": "Wikipedia",
       "canonical_url": "https://en.wikipedia.org/wiki/Wc_(Unix)",
       "source_url": "https://en.wikipedia.org/api/rest_v1/page/summary/Wc_(Unix)",
-      "fetched_at": "2026-06-15T08:44:27Z"
+      "fetched_at": "2026-06-15T11:15:37Z"
     }
   }
 }

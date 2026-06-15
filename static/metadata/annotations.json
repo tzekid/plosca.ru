@@ -55,7 +55,7 @@
       "source": "/hello_world",
       "source_title": "Hello World",
       "title": "Reinventing the wheel",
-      "summary": "To reinvent the wheel is to attempt to duplicate—most likely with inferior results—a basic method that has already previously been created or optimized by others. The inspiration for this idiomatic metaphor is that the wheel is an ancient archetype of human ingenuity. As it has already been invented and is not considered to have any inherent flaws, an at...",
+      "summary": "To reinvent the wheel is to attempt to duplicate—most likely with inferior results—a basic method that has already previously been created or optimized by others. The inspiration for this idiomatic metaphor is that the wheel is an ancient archetype of human ingenuity. As it has already been invented and is not considered to have any inherent flaws, an attempt to reinvent it would add no value to it and be a waste of time, diverting the investigator's resources from possibly more worthy goals.",
       "site_name": "Wikipedia",
       "context_kind": "wikipedia",
       "canonical_url": "https://en.wikipedia.org/wiki/Reinventing_the_wheel",
@@ -68,7 +68,7 @@
       "source": "/hello_world",
       "source_title": "Hello World",
       "title": "KISS principle",
-      "summary": "KISS is a design principle first noted by the U.S. Navy in 1960. First seen partly in American English by at least 1938, KISS implies that simplicity should be a design goal. The phrase has been associated with aircraft engineer Kelly Johnson. The term \"KISS principle\" was in popular use by 1970. Variations on the phrase include \"keep it super simple\", \"keep...",
+      "summary": "KISS is a design principle first noted by the U.S. Navy in 1960. First seen partly in American English by at least 1938, KISS implies that simplicity should be a design goal. The phrase has been associated with aircraft engineer Kelly Johnson. The term \"KISS principle\" was in popular use by 1970. Variations on the phrase include \"keep it super simple\", \"keep it simple, silly\", \"keep it short and simple\", \"keep it short and sweet\", \"keep it simple and straightforward\", \"keep it small and simple\", \"keep it simple, soldier\", \"keep it simple, sailor\", \"keep it simple, sweetie\", \"keep it stupidly simple\", or \"keep it sweet and simple\".",
       "site_name": "Wikipedia",
       "context_kind": "wikipedia",
       "canonical_url": "https://en.wikipedia.org/wiki/KISS_principle",
@@ -133,7 +133,9 @@
       "source": "/hello_world",
       "source_title": "Hello World",
       "title": "Prose",
-      "summary": "Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples."
+      "summary": "This is a selection of my old poems (and one from a good friend). More to come soon™. If you have some works of your own, feel free to hit me up, I’d be more than glad to see them :) Clouds were not shaped for us to glaze at Nor were the stars made for us to live by • Dreams thought us that, and much more than that They thought us to always question why. Worlds apart are we from us Worlds apart are we from us When time stops and forgets about its fuss - Our hearts start blazing As we lean in, stargazing Through two universes vast, Universes of the past, Universes full of lust, Full of dreams and lack of trust. Lost and with many abstruse thought I have found what I've never sought To find, or even to pretend To have seen anything, but a dark descend Behind, over and in between There is darkness to be seen, Behind the stars which fairly lit The universe with warmth and wit. In between there's only time Which divides dark from sublime But once it wakes, it wants to start - And when...",
+      "site_name": "plosca.ru",
+      "context_kind": "article"
     },
     {
       "href": "/about",
@@ -142,7 +144,9 @@
       "source": "/hello_world",
       "source_title": "Hello World",
       "title": "About",
-      "summary": "About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation."
+      "summary": "Based in Frankfurt. Open to high‑impact product / platform / data infrastructure roles (remote / hybrid).",
+      "site_name": "plosca.ru",
+      "context_kind": "internal"
     },
     {
       "href": "/metadata/connections/hello_world.html",
@@ -160,7 +164,10 @@
       "source": "/prose",
       "source_title": "Prose",
       "title": "Hello World",
-      "summary": "Hello World: first post by Ilie Ploscaru introducing the site and its themes."
+      "summary": "TL;DR Short rant about the website. With free time on my hands these holidays I’ve decided that it was about time to revamp my website. Learning to use an off the shelf static site generator looked daunting, so I’ve decided to build my own ™. The main goals of this website was to put myself out there and learn to write for an audience. The main design choice for the website was: steal as much as possible from other people, and hope you have stolen enough so that people won’t pinpoint the source at first glance.",
+      "date": "2019-01-01",
+      "site_name": "plosca.ru",
+      "context_kind": "article"
     },
     {
       "href": "/",
@@ -169,7 +176,10 @@
       "source": "/prose",
       "source_title": "Prose",
       "title": "Ilie Ploscaru",
-      "summary": "Personal site of Ilie Ploscaru, interested in psychology and tech."
+      "summary": "Personal site of Ilie Ploscaru, interested in psychology and tech.",
+      "date": "2019-01-01",
+      "site_name": "plosca.ru",
+      "context_kind": "internal"
     },
     {
       "href": "/metadata/connections/prose.html",
