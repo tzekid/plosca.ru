@@ -94,7 +94,9 @@
         const box = ensurePreview();
         const rect = anchor.getBoundingClientRect();
         const margin = 16;
-        const width = Math.min(activeInteractive ? 560 : 420, window.innerWidth - margin * 2);
+        const isPdfPreview = box.classList.contains("link-preview--pdf");
+        const targetWidth = isPdfPreview ? 780 : activeInteractive ? 560 : 420;
+        const width = Math.min(targetWidth, window.innerWidth - margin * 2);
         box.style.width = `${width}px`;
 
         const previewRect = box.getBoundingClientRect();
