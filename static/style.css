@@ -1047,16 +1047,27 @@
     opacity: 0.72;
   }
   article a[href$=".pdf"]:not(.btn-primary):not(.btn-secondary):not(.btn-outline)::after {
+    display: inline-block;
     content: "PDF";
     margin-left: 0.35em;
-    border: 1px solid var(--color-brand-border-soft);
-    border-radius: var(--radius-sm);
-    padding: 0.04em 0.28em 0.02em;
-    font-size: 0.58em;
+    border: 1px solid var(--color-brand-border);
+    border-radius: calc(var(--radius-sm) - 1px);
+    background: var(--color-brand-wash-strong);
+    padding: 0.05em 0.34em 0.03em;
+    font-size: 0.62em;
     font-weight: var(--font-weight-bold);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
     color: var(--color-brand-dark);
+    text-decoration: none;
     vertical-align: 0.12em;
+  }
+  .header-cta a[href$=".pdf"]::after,
+  .btn-primary[href$=".pdf"]::after,
+  .btn-secondary[href$=".pdf"]::after,
+  .btn-outline[href$=".pdf"]::after {
+    content: none !important;
+    display: none !important;
   }
   #TOC a::after,
   .up-btn::after,
@@ -1482,7 +1493,7 @@
     border-style: var(--tw-border-style);
     border-width: 1px;
     border-color: var(--color-brand);
-    background-color: var(--color-paper);
+    background-color: var(--color-panel-soft);
     color: var(--color-brand);
   }
   .btn-secondary:hover, .btn-outline:hover {
@@ -1582,8 +1593,8 @@
     margin: 14px 0 0;
   }
   .pill-neutral {
-    border-color: var(--color-gray-200);
-    background-color: var(--color-gray-50);
+    border-color: var(--color-brand-border-soft);
+    background-color: var(--color-panel-soft);
     color: var(--color-ink-muted);
   }
   .competency-columns {
