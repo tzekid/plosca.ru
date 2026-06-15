@@ -116,6 +116,29 @@
             return;
         }
 
+        if (isPdfPreview) {
+            const gutter = 18;
+            const rightSpace = window.innerWidth - rect.right - gutter - margin;
+            const leftSpace = rect.left - gutter - margin;
+            const preferRight = rightSpace >= 360 || rightSpace >= leftSpace;
+            const sideSpace = preferRight ? rightSpace : leftSpace;
+            const sideWidth = Math.min(780, sideSpace);
+
+            if (sideWidth >= 360) {
+                box.style.width = `${sideWidth}px`;
+                box.style.bottom = "";
+                box.style.transform = "";
+                const previewRect = box.getBoundingClientRect();
+                const sideLeft = preferRight ? rect.right + gutter : rect.left - sideWidth - gutter;
+                const verticalLimit = Math.max(margin, window.innerHeight - previewRect.height - margin);
+                const sideTop = Math.min(Math.max(margin, rect.top - 64), verticalLimit);
+
+                box.style.left = `${sideLeft}px`;
+                box.style.top = `${sideTop}px`;
+                return;
+            }
+        }
+
         const targetWidth = isPdfPreview ? 780 : activeInteractive ? 560 : 420;
         const width = Math.min(targetWidth, window.innerWidth - margin * 2);
         box.style.width = `${width}px`;
