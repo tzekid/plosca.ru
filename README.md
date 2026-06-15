@@ -77,6 +77,15 @@ Check that generated CSS, stylesheet cache-busters, and local asset references a
 zig build check-site
 ```
 
+After changing `static/resume.pdf`, regenerate the committed hover-preview image before rebuilding site metadata:
+
+```sh
+zig build pdf-previews
+zig build css
+```
+
+This uses `pdftoppm` from Poppler. It is only needed when refreshing PDF preview assets; normal checks and deployment use the committed JPEG.
+
 ### Link Context
 
 External-link popovers are generated from a committed build-time cache at `src/content/link_context.json`. Refresh it after adding or changing external links:

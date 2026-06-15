@@ -37,6 +37,7 @@ Commands:
 - Build: `zig build -Doptimize=ReleaseFast`
 - Test: `zig build test`
 - Build CSS and update HTML stylesheet cache-busters: `zig build css`
+- Regenerate the committed resume PDF hover preview after changing `static/resume.pdf`: `zig build pdf-previews`
 - Refresh external-link context cache after changing external links: `zig build enrich-links`
 - Check CSS/hash sync and local asset references: `zig build check-site`
 - Smoke local site: `./scripts/smoke.sh`
@@ -55,4 +56,4 @@ Missing files return `static/404.html` with status `404` when available.
 
 ## Notes
 
-There is no asset embedding, generated manifest, metrics endpoint, Docker setup, Rust task runner, Node workflow, Tailwind build, or Playwright suite. The server streams from disk, emits cache validators, and can serve `.br`/`.gz` siblings when present. `zig build enrich-links` is the only networked site-generation step and is intentionally manual; normal `css`, `check-site`, test, and deploy commands use the committed cache offline. Plausible is the only intentional third-party runtime script; do not add frontend runtime dependencies unless the site actually needs client-side behavior.
+There is no asset embedding, generated manifest, metrics endpoint, Docker setup, Rust task runner, Node workflow, Tailwind build, or Playwright suite. The server streams from disk, emits cache validators, and can serve `.br`/`.gz` siblings when present. `zig build enrich-links` is the only networked site-generation step and is intentionally manual; `zig build pdf-previews` is a local manual asset-generation step that uses Poppler's `pdftoppm` only when the resume PDF changes. Normal `css`, `check-site`, test, and deploy commands use committed assets/caches offline. Plausible is the only intentional third-party runtime script; do not add frontend runtime dependencies unless the site actually needs client-side behavior.

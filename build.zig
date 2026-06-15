@@ -60,4 +60,9 @@ pub fn build(b: *std.Build) void {
     enrich_links_cmd.addArg("enrich-links");
     const enrich_links_step = b.step("enrich-links", "Refresh cached external-link context with curl");
     enrich_links_step.dependOn(&enrich_links_cmd.step);
+
+    const pdf_previews_cmd = b.addRunArtifact(site_tool);
+    pdf_previews_cmd.addArg("pdf-previews");
+    const pdf_previews_step = b.step("pdf-previews", "Render committed PDF preview images with pdftoppm");
+    pdf_previews_step.dependOn(&pdf_previews_cmd.step);
 }

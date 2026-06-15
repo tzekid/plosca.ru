@@ -122,23 +122,36 @@
         }
 
         const box = ensurePreview();
-        const interactive = annotation.context_kind === "wikipedia" || annotation.kind === "internal";
+        const hasPreviewImage = Boolean(annotation.preview_image);
+        const isPdfPreview = annotation.context_kind === "pdf" || annotation.kind === "pdf";
+        const interactive = annotation.context_kind === "wikipedia" || annotation.kind === "internal" || isPdfPreview;
         activeInteractive = interactive;
         box.classList.toggle("link-preview--interactive", interactive);
         box.classList.toggle("link-preview--article", annotation.kind === "internal");
         box.classList.toggle("link-preview--wikipedia", annotation.context_kind === "wikipedia");
-        const source = escapeHtml(annotation.site_name || annotation.context_kind || annotation.kind || "link");
+        box.classList.toggle("link-preview--pdf", isPdfPreview);
+        const source = escapeHtml(isPdfPreview ? "PDF" : annotation.site_name || annotation.context_kind || annotation.kind || "link");
         const date = annotation.date ? escapeHtml(formatDate(annotation.date)) : "";
+        const fileSize = Number.isFinite(Number(annotation.file_size)) ? escapeHtml(formatBytes(Number(annotation.file_size))) : "";
         const archive = annotation.archive
             ? `<a href="${escapeHtml(annotation.archive)}">archive record</a>`
             : "";
-        const meta = [source, date, archive].filter(Boolean).join(" · ");
+        const open = isPdfPreview ? `<a href="${escapeHtml(annotation.href)}">open PDF</a>` : "";
+        const meta = [source, date, fileSize, archive || open].filter(Boolean).join(" · ");
+        const previewWidth = Number.isFinite(Number(annotation.preview_width)) ? ` width="${Number(annotation.preview_width)}"` : "";
+        const previewHeight = Number.isFinite(Number(annotation.preview_height)) ? ` height="${Number(annotation.preview_height)}"` : "";
+        const previewImage = hasPreviewImage
+            ? `<figure class="link-preview__figure">
+                <img src="${escapeHtml(annotation.preview_image)}"${previewWidth}${previewHeight} alt="${escapeHtml(annotation.title || annotation.text || "PDF")} preview" loading="lazy" decoding="async">
+            </figure>`
+            : "";
         box.innerHTML = `
             <div class="link-preview__header">
                 <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
             </div>
             <div class="link-preview__body">
                 <p>${escapeHtml(annotation.summary || annotation.href)}</p>
+                ${previewImage}
             </div>
             <small class="link-preview__meta">${meta}</small>
         `;
@@ -164,6 +177,20 @@
             year: "numeric",
             timeZone: "UTC",
         });
+    };
+
+    const formatBytes = (value) => {
+        if (!Number.isFinite(value) || value < 0) return "";
+        if (value < 1024) return `${value} B`;
+        const units = ["KB", "MB", "GB"];
+        let scaled = value / 1024;
+        let unitIndex = 0;
+        while (scaled >= 1024 && unitIndex < units.length - 1) {
+            scaled /= 1024;
+            unitIndex += 1;
+        }
+        const precision = scaled >= 10 || unitIndex === 0 ? 0 : 1;
+        return `${scaled.toFixed(precision)} ${units[unitIndex]}`;
     };
 
     const initAnnotations = () => {

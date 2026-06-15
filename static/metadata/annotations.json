@@ -33,7 +33,13 @@
       "source": "/about",
       "source_title": "About",
       "title": "Resume PDF",
-      "summary": "Static asset or local route."
+      "summary": "One-page resume PDF for Mircea Ilie Ploscaru, focused on full-stack development, data engineering, BI, and automation.",
+      "site_name": "plosca.ru",
+      "context_kind": "pdf",
+      "file_size": 264145,
+      "preview_image": "/resume-preview-27833c1a5937f8c5.jpg",
+      "preview_width": 760,
+      "preview_height": 1075
     },
     {
       "href": "https://www.staticgen.com/",

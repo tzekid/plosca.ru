@@ -18,6 +18,11 @@ const annotations_json_path = "static/metadata/annotations.json";
 const external_links_json_path = "static/metadata/external-links.json";
 const archive_dir_path = "static/archive";
 const archive_index_path = "static/archive/index.html";
+const resume_pdf_href = "/resume.pdf";
+const resume_pdf_path = "static/resume.pdf";
+const resume_preview_prefix = "resume-preview-";
+const resume_preview_ext = ".jpg";
+const resume_preview_width = 760;
 const max_file_size = 16 * 1024 * 1024;
 const max_fetch_size = 2 * 1024 * 1024;
 const link_summary_limit = 360;
@@ -27,6 +32,7 @@ const link_title_limit = 140;
 const curl_user_agent = "plosca.ru-link-enricher/1.0 (+https://plosca.ru/about)";
 
 const CheckError = error{SiteCheckFailed};
+const PdfPreviewError = error{PdfPreviewFailed};
 
 const AssetVersions = struct {
     style: [16]u8,
@@ -138,6 +144,8 @@ pub fn main(init: std.process.Init) !void {
         try checkSite(init.io, init.gpa);
     } else if (std.mem.eql(u8, args[1], "enrich-links")) {
         try enrichLinks(init.io, init.gpa);
+    } else if (std.mem.eql(u8, args[1], "pdf-previews")) {
+        try writePdfPreviews(init.io, init.gpa);
     } else {
         usageAndExit();
     }
@@ -149,6 +157,7 @@ fn usageAndExit() noreturn {
         \\  site-tool write
         \\  site-tool check
         \\  site-tool enrich-links
+        \\  site-tool pdf-previews
         \\
     , .{});
     std.process.exit(2);
@@ -226,6 +235,157 @@ fn assetVersion(contents: []const u8) [16]u8 {
         out[index * 2 + 1] = hex[byte & 0x0f];
     }
     return out;
+}
+
+const PdfPreviewInfo = struct {
+    href: []u8,
+    path: []u8,
+    basename: []u8,
+    file_size: usize,
+
+    fn deinit(self: PdfPreviewInfo, gpa: std.mem.Allocator) void {
+        gpa.free(self.href);
+        gpa.free(self.path);
+        gpa.free(self.basename);
+    }
+};
+
+const ImageDimensions = struct {
+    width: usize,
+    height: usize,
+};
+
+fn resumePdfPreviewInfo(io: Io, gpa: std.mem.Allocator) !PdfPreviewInfo {
+    const pdf = try Io.Dir.cwd().readFileAlloc(io, resume_pdf_path, gpa, .limited(max_file_size));
+    defer gpa.free(pdf);
+
+    const hash = assetVersion(pdf);
+    const basename = try std.fmt.allocPrint(gpa, "{s}{s}{s}", .{ resume_preview_prefix, hash[0..], resume_preview_ext });
+    errdefer gpa.free(basename);
+    const href = try std.fmt.allocPrint(gpa, "/{s}", .{basename});
+    errdefer gpa.free(href);
+    const path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ static_dir_path, basename });
+    errdefer gpa.free(path);
+
+    return .{
+        .href = href,
+        .path = path,
+        .basename = basename,
+        .file_size = pdf.len,
+    };
+}
+
+fn writePdfPreviews(io: Io, gpa: std.mem.Allocator) !void {
+    const preview = try resumePdfPreviewInfo(io, gpa);
+    defer preview.deinit(gpa);
+
+    try removeStaleResumePreviews(io, preview.basename);
+
+    const prefix = try std.fmt.allocPrint(gpa, "{s}/{s}{s}", .{ static_dir_path, resume_preview_prefix, preview.basename[resume_preview_prefix.len .. preview.basename.len - resume_preview_ext.len] });
+    defer gpa.free(prefix);
+
+    const argv = [_][]const u8{
+        "pdftoppm",
+        "-singlefile",
+        "-jpeg",
+        "-jpegopt",
+        "quality=86,progressive=y,optimize=y",
+        "-scale-to-x",
+        "760",
+        "-scale-to-y",
+        "-1",
+        resume_pdf_path,
+        prefix,
+    };
+    const result = std.process.run(gpa, io, .{
+        .argv = &argv,
+        .expand_arg0 = .expand,
+        .stdout_limit = .limited(64 * 1024),
+        .stderr_limit = .limited(64 * 1024),
+    }) catch |err| {
+        if (err == error.FileNotFound) {
+            std.debug.print("pdftoppm is required for `zig build pdf-previews`; install Poppler to regenerate {s}\n", .{preview.path});
+        }
+        return err;
+    };
+    defer gpa.free(result.stdout);
+    defer gpa.free(result.stderr);
+
+    const ok = switch (result.term) {
+        .exited => |code| code == 0,
+        else => false,
+    };
+    if (!ok) {
+        std.debug.print("pdftoppm failed while rendering {s}:\n{s}\n", .{ resume_pdf_path, result.stderr });
+        return PdfPreviewError.PdfPreviewFailed;
+    }
+
+    const dimensions = try readJpegDimensions(io, gpa, preview.path);
+    if (dimensions.width != resume_preview_width) {
+        std.debug.print("{s}: expected width {d}, got {d}\n", .{ preview.path, resume_preview_width, dimensions.width });
+        return PdfPreviewError.PdfPreviewFailed;
+    }
+    std.debug.print("rendered {s} ({d}x{d})\n", .{ preview.path, dimensions.width, dimensions.height });
+}
+
+fn removeStaleResumePreviews(io: Io, expected_basename: []const u8) !void {
+    var static_dir = try Io.Dir.cwd().openDir(io, static_dir_path, .{ .iterate = true });
+    defer static_dir.close(io);
+
+    var it = static_dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        if (!isResumePreviewName(entry.name)) continue;
+        if (std.mem.eql(u8, entry.name, expected_basename)) continue;
+        try static_dir.deleteFile(io, entry.name);
+    }
+}
+
+fn isResumePreviewName(name: []const u8) bool {
+    return std.mem.startsWith(u8, name, resume_preview_prefix) and std.mem.endsWith(u8, name, resume_preview_ext);
+}
+
+fn readJpegDimensions(io: Io, gpa: std.mem.Allocator, path: []const u8) !ImageDimensions {
+    const data = try Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(max_file_size));
+    defer gpa.free(data);
+    return parseJpegDimensions(data) orelse error.InvalidJpeg;
+}
+
+fn parseJpegDimensions(data: []const u8) ?ImageDimensions {
+    if (data.len < 4 or data[0] != 0xff or data[1] != 0xd8) return null;
+
+    var index: usize = 2;
+    while (index + 3 < data.len) {
+        while (index < data.len and data[index] != 0xff) index += 1;
+        if (index + 3 >= data.len) return null;
+        while (index < data.len and data[index] == 0xff) index += 1;
+        if (index >= data.len) return null;
+
+        const marker = data[index];
+        index += 1;
+        if (marker == 0xd9 or marker == 0xda) return null;
+        if (marker == 0x01 or (marker >= 0xd0 and marker <= 0xd7)) continue;
+        if (index + 1 >= data.len) return null;
+
+        const segment_len = (@as(usize, data[index]) << 8) | data[index + 1];
+        if (segment_len < 2 or index + segment_len > data.len) return null;
+        if (isJpegStartOfFrame(marker)) {
+            if (segment_len < 7) return null;
+            return .{
+                .height = (@as(usize, data[index + 3]) << 8) | data[index + 4],
+                .width = (@as(usize, data[index + 5]) << 8) | data[index + 6],
+            };
+        }
+        index += segment_len;
+    }
+    return null;
+}
+
+fn isJpegStartOfFrame(marker: u8) bool {
+    return switch (marker) {
+        0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf => true,
+        else => false,
+    };
 }
 
 fn writeGeneratedMetadata(io: Io, gpa: std.mem.Allocator) !void {
@@ -327,6 +487,7 @@ fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
     const expected_external_links = try renderExternalLinksJson(io, gpa);
     defer gpa.free(expected_external_links);
     failures += try checkGeneratedFileContents(io, gpa, external_links_json_path, expected_external_links);
+    failures += try checkResumePdfPreview(io, gpa);
 
     for (pages) |page| {
         if (page.kind == .error_page) continue;
@@ -349,6 +510,46 @@ fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
                 failures += 1;
             }
         }
+    }
+    return failures;
+}
+
+fn checkResumePdfPreview(io: Io, gpa: std.mem.Allocator) !usize {
+    const preview = try resumePdfPreviewInfo(io, gpa);
+    defer preview.deinit(gpa);
+
+    var failures: usize = 0;
+    if (!try fileExists(io, gpa, preview.path)) {
+        std.debug.print("{s} is missing; run `zig build pdf-previews` then `zig build css`\n", .{preview.path});
+        failures += 1;
+    } else {
+        const dimensions = readJpegDimensions(io, gpa, preview.path) catch |err| {
+            std.debug.print("{s}: invalid JPEG preview: {s}\n", .{ preview.path, @errorName(err) });
+            failures += 1;
+            return failures + try checkStaleResumePreviews(io, preview.basename);
+        };
+        if (dimensions.width != resume_preview_width) {
+            std.debug.print("{s}: expected width {d}, got {d}; run `zig build pdf-previews`\n", .{ preview.path, resume_preview_width, dimensions.width });
+            failures += 1;
+        }
+    }
+
+    failures += try checkStaleResumePreviews(io, preview.basename);
+    return failures;
+}
+
+fn checkStaleResumePreviews(io: Io, expected_basename: []const u8) !usize {
+    var static_dir = try Io.Dir.cwd().openDir(io, static_dir_path, .{ .iterate = true });
+    defer static_dir.close(io);
+
+    var failures: usize = 0;
+    var it = static_dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file) continue;
+        if (!isResumePreviewName(entry.name)) continue;
+        if (std.mem.eql(u8, entry.name, expected_basename)) continue;
+        std.debug.print("static/{s} is stale; run `zig build pdf-previews`\n", .{entry.name});
+        failures += 1;
     }
     return failures;
 }
@@ -437,6 +638,14 @@ fn appendJsonNullField(gpa: std.mem.Allocator, out: *std.ArrayList(u8), key: []c
     try out.appendSlice(gpa, "      ");
     try appendJsonString(gpa, out, key);
     try out.appendSlice(gpa, ": null");
+    if (comma) try out.appendSlice(gpa, ",");
+    try out.appendSlice(gpa, "\n");
+}
+
+fn appendJsonNumberField(gpa: std.mem.Allocator, out: *std.ArrayList(u8), key: []const u8, value: usize, comma: bool) !void {
+    try out.appendSlice(gpa, "      ");
+    try appendJsonString(gpa, out, key);
+    try out.print(gpa, ": {d}", .{value});
     if (comma) try out.appendSlice(gpa, ",");
     try out.appendSlice(gpa, "\n");
 }
@@ -812,11 +1021,33 @@ fn appendAnnotationObject(
         try appendJsonField(gpa, out, "context_kind", context_kind, false);
     } else if (std.mem.eql(u8, kind, "external")) {
         try appendExternalAnnotation(gpa, out, href, trimmed_text, link_context);
+    } else if (std.mem.eql(u8, kind, "pdf") and std.mem.eql(u8, href, resume_pdf_href)) {
+        try appendResumePdfAnnotation(io, gpa, out);
     } else {
         try appendJsonField(gpa, out, "title", trimmed_text, true);
         try appendJsonField(gpa, out, "summary", "Static asset or local route.", false);
     }
     try out.appendSlice(gpa, "    }");
+}
+
+fn appendResumePdfAnnotation(io: Io, gpa: std.mem.Allocator, out: *std.ArrayList(u8)) !void {
+    const preview = try resumePdfPreviewInfo(io, gpa);
+    defer preview.deinit(gpa);
+
+    try appendJsonField(gpa, out, "title", "Resume PDF", true);
+    try appendJsonField(gpa, out, "summary", "One-page resume PDF for Mircea Ilie Ploscaru, focused on full-stack development, data engineering, BI, and automation.", true);
+    try appendJsonField(gpa, out, "site_name", "plosca.ru", true);
+    try appendJsonField(gpa, out, "context_kind", "pdf", true);
+
+    if (try fileExists(io, gpa, preview.path)) {
+        const dimensions = try readJpegDimensions(io, gpa, preview.path);
+        try appendJsonNumberField(gpa, out, "file_size", preview.file_size, true);
+        try appendJsonField(gpa, out, "preview_image", preview.href, true);
+        try appendJsonNumberField(gpa, out, "preview_width", dimensions.width, true);
+        try appendJsonNumberField(gpa, out, "preview_height", dimensions.height, false);
+    } else {
+        try appendJsonNumberField(gpa, out, "file_size", preview.file_size, false);
+    }
 }
 
 fn internalPageSummary(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
