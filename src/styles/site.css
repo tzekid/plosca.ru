@@ -788,6 +788,19 @@ pre.sourceCode {
   overflow-wrap: normal;
   word-break: normal;
 }
+pre.sourceCode::-webkit-scrollbar {
+  height: 0.38rem;
+}
+pre.sourceCode::-webkit-scrollbar-track {
+  background: transparent;
+}
+pre.sourceCode::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background-color: var(--color-code-scrollbar);
+}
+pre.sourceCode::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-brand-border);
+}
 code.sourceCode {
   display: block;
   background-color: transparent;
@@ -1387,10 +1400,17 @@ article summary:focus-visible {
 }
 #TOC ul li {
   list-style-type: none;
+  display: grid;
+  grid-template-columns: minmax(3.25ch, auto) minmax(0, 1fr);
+  column-gap: calc(var(--spacing) * 2.5);
+  align-items: baseline;
   line-height: var(--leading-snug);
   font-weight: var(--font-weight-semibold);
   margin-top: 0.58em;
   margin-bottom: 0.58em;
+}
+#TOC ul li > ul {
+  grid-column: 1 / -1;
 }
 #TOC ul li ul li {
   list-style-type: none;
@@ -1400,8 +1420,10 @@ article summary:focus-visible {
   margin-bottom: 0.42em;
 }
 #TOC a {
+  min-width: 0;
   color: var(--color-ink-soft);
   text-decoration-line: none;
+  overflow-wrap: anywhere;
 }
 #TOC a:hover, #TOC a:focus-visible {
   color: var(--color-brand-hover);
@@ -1462,13 +1484,11 @@ article summary:focus-visible {
 }
 #TOC ul li::before {
   pointer-events: none;
-  margin-right: calc(var(--spacing) * 2);
-  display: inline-block;
+  display: block;
   text-align: right;
   font-weight: var(--font-weight-normal);
   color: var(--color-brand);
   opacity: 50%;
-  min-width: 3.25ch;
 }
 #TOC ul li:hover::before {
   opacity: 0.7;
@@ -2002,32 +2022,37 @@ article summary:focus-visible {
   }
   pre.sourceCode {
     padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
   code.sourceCode, pre.sourceCode {
-    font-size: clamp(0.72rem, 3.1vw, 0.82rem);
+    font-size: 1.0625rem;
     line-height: 1.62;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    white-space: pre;
+    overflow-wrap: normal;
     word-break: normal;
   }
   code.sourceCode {
-    width: 100%;
-    min-width: 0;
+    width: max-content;
+    min-width: 100%;
     padding: 0.82rem 0.9rem;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    white-space: pre;
+    overflow-wrap: normal;
     word-break: normal;
   }
   #TOC {
     margin-top: 26px;
     margin-bottom: 36px;
-    max-height: 16rem;
+    max-height: none;
+    overflow: visible;
     font-size: 0.94rem;
   }
   .prose-page pre:not(.sourceCode) {
-    padding-left: 1rem;
-    font-size: 1rem;
-    line-height: 1.78;
+    padding-left: 0.85rem;
+    font-size: 0.94rem;
+    line-height: 1.74;
   }
   .generated-connections {
     grid-template-columns: 1fr;
@@ -2107,7 +2132,7 @@ article summary:focus-visible {
   }
   #TOC {
     padding-inline: calc(var(--spacing) * 4);
-    max-height: 13.5rem;
+    padding-block: calc(var(--spacing) * 4.5);
   }
 }
 @media screen and (max-width: 520px) {
@@ -2117,6 +2142,9 @@ article summary:focus-visible {
   }
   article h2 {
     font-size: 1.5em;
+  }
+  .prose-page h3 {
+    font-size: 1em;
   }
 }
 
