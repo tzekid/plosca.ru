@@ -16,8 +16,8 @@ Scope note: large Gwern.net features are implemented in a `plosca.ru`-scaled for
 
 | Item | Scope | Status | Implementation notes | Verification | Commit / publish |
 | --- | --- | --- | --- | --- | --- |
-| Article metadata manifest | quick win | pending | Add a small source-of-truth page manifest for title, route, description, date, tags, and related links. | `zig build check-site`, generated output diff | pending |
-| Content quality checks | quick win | pending | Extend `zig build check-site` with title/description, IDs, duplicate IDs, empty anchors, and metadata checks. | `zig build check-site` | pending |
+| Article metadata manifest | quick win | completed | Added a Zig-owned page manifest and generated `static/metadata/pages.json` with routes, files, titles, descriptions, dates, tags, and related links. | `zig build css`, `zig build check-site`, generated output diff | ready for slice commit/publish |
+| Content quality checks | quick win | completed | Extended `zig build check-site` with manifest sync checks, title validation, meta description validation, duplicate/empty ID checks, local fragment checks, manifest route checks, and empty-anchor checks that ignore commented markup and Pandoc code line anchors. | `zig build check-site`, `zig build test`, `zig build -Doptimize=ReleaseFast`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Heading self-links | quick win | pending | Add accessible heading permalink affordances without requiring JS. | screenshot/smoke, `zig build check-site` | pending |
 | Better 404 recovery | quick win | pending | Improve 404 with route recovery links and page-specific copy. | local and deployed missing-route smoke | pending |
 | Article related links | quick win | pending | Add small related/connection blocks to article pages. | `zig build check-site`, visual smoke | pending |

@@ -1,0 +1,64 @@
+{
+  "pages": [
+    {
+      "slug": "home",
+      "route": "/",
+      "file": "index.html",
+      "title": "Ilie Ploscaru",
+      "description": "Personal site of Ilie Ploscaru, interested in psychology and tech.",
+      "date": "2019-01-01",
+      "updated": "2026-06-14",
+      "kind": "home",
+      "tags": ["personal", "index", "writing"],
+      "related": ["/hello_world", "/about", "/prose"]
+    },
+    {
+      "slug": "about",
+      "route": "/about",
+      "file": "about.html",
+      "title": "About",
+      "description": "About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.",
+      "date": null,
+      "updated": "2026-06-14",
+      "kind": "profile",
+      "tags": ["profile", "resume", "work"],
+      "related": ["/", "/resume.pdf"]
+    },
+    {
+      "slug": "hello_world",
+      "route": "/hello_world",
+      "file": "hello_world.html",
+      "title": "Hello World",
+      "description": "Hello World: first post by Ilie Ploscaru introducing the site and its themes.",
+      "date": "2019-01-01",
+      "updated": "2026-06-14",
+      "kind": "article",
+      "tags": ["website", "static-site", "pandoc", "bash"],
+      "related": ["/prose", "/about"]
+    },
+    {
+      "slug": "prose",
+      "route": "/prose",
+      "file": "prose.html",
+      "title": "Prose",
+      "description": "Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.",
+      "date": null,
+      "updated": "2026-06-14",
+      "kind": "prose",
+      "tags": ["prose", "poetry", "writing"],
+      "related": ["/hello_world", "/"]
+    },
+    {
+      "slug": "404",
+      "route": "/404",
+      "file": "404.html",
+      "title": "Page not found | Ilie Ploscaru",
+      "description": "The requested page was not found. Return to the main pages on plosca.ru.",
+      "date": null,
+      "updated": "2026-06-14",
+      "kind": "error",
+      "tags": ["recovery"],
+      "related": ["/", "/about", "/hello_world", "/prose"]
+    }
+  ]
+}
