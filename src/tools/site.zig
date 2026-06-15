@@ -28,6 +28,7 @@ const max_fetch_size = 2 * 1024 * 1024;
 const link_summary_limit = 360;
 const internal_summary_limit = 1000;
 const wikipedia_summary_limit = 1200;
+const preview_html_limit = 1800;
 const link_title_limit = 140;
 const curl_user_agent = "plosca.ru-link-enricher/1.0 (+https://plosca.ru/about)";
 
@@ -1010,12 +1011,17 @@ fn appendAnnotationObject(
     if (pageByRoute(href)) |target| {
         const summary = try internalPageSummary(io, gpa, target);
         defer gpa.free(summary);
+        const preview_html = try internalPagePreviewHtml(io, gpa, target);
+        defer gpa.free(preview_html);
         const context_kind = switch (target.kind) {
             .article, .prose => "article",
             else => "internal",
         };
         try appendJsonField(gpa, out, "title", target.title, true);
         try appendJsonField(gpa, out, "summary", summary, true);
+        if (std.mem.trim(u8, preview_html, " \t\r\n").len != 0) {
+            try appendJsonField(gpa, out, "preview_html", preview_html, true);
+        }
         if (target.date) |date| try appendJsonField(gpa, out, "date", date, true);
         try appendJsonField(gpa, out, "site_name", "plosca.ru", true);
         try appendJsonField(gpa, out, "context_kind", context_kind, false);
@@ -1048,6 +1054,94 @@ fn appendResumePdfAnnotation(io: Io, gpa: std.mem.Allocator, out: *std.ArrayList
     } else {
         try appendJsonNumberField(gpa, out, "file_size", preview.file_size, false);
     }
+}
+
+fn internalPagePreviewHtml(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    const html = try readStaticFile(io, gpa, page.file);
+    defer gpa.free(html);
+
+    const article = extractElement(html, "article") orelse html;
+    var body = article;
+    if (std.mem.indexOf(u8, body, "</header>")) |header_end| {
+        body = body[header_end + "</header>".len ..];
+    }
+    if (std.mem.indexOf(u8, body, "<nav id=\"TOC\"")) |toc_start| {
+        if (std.mem.indexOfPos(u8, body, toc_start, "</nav>")) |toc_end| {
+            if (std.mem.trim(u8, body[0..toc_start], " \t\r\n").len == 0) {
+                body = body[toc_end + "</nav>".len ..];
+            }
+        }
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"article-links\"")) |section_start| {
+        body = body[0..section_start];
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"generated-section\"")) |section_start| {
+        body = body[0..section_start];
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"article-generated\"")) |section_start| {
+        body = body[0..section_start];
+    }
+
+    return try articleBlockPreviewHtml(gpa, body);
+}
+
+fn articleBlockPreviewHtml(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var search_pos: usize = 0;
+    var block_count: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<p")) |block_start| {
+        const tag_end = std.mem.indexOfScalarPos(u8, html, block_start, '>') orelse break;
+        const tag = html[block_start..tag_end];
+        if (std.mem.indexOf(u8, tag, "class=\"date\"") != null) {
+            search_pos = tag_end + 1;
+            continue;
+        }
+        const close = findClosingTag(html, tag_end + 1, "p") orelse break;
+        const block = html[block_start..close.end];
+        const cleaned = try stripPreviewChrome(gpa, block);
+        defer gpa.free(cleaned);
+        const text = try htmlText(gpa, cleaned);
+        defer gpa.free(text);
+        if (std.mem.trim(u8, text, " \t\r\n").len == 0) {
+            search_pos = close.end;
+            continue;
+        }
+
+        if (out.items.len + cleaned.len > preview_html_limit and out.items.len != 0) break;
+        try out.appendSlice(gpa, cleaned);
+        try out.append(gpa, '\n');
+        block_count += 1;
+        search_pos = close.end;
+        if (out.items.len >= preview_html_limit or block_count >= 5) break;
+    }
+
+    return try out.toOwnedSlice(gpa);
+}
+
+fn stripPreviewChrome(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var cursor: usize = 0;
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<a")) |anchor_start| {
+        const tag_end = std.mem.indexOfScalarPos(u8, html, anchor_start, '>') orelse break;
+        const tag = html[anchor_start..tag_end];
+        const skip = std.mem.indexOf(u8, tag, "heading-anchor") != null or
+            std.mem.indexOf(u8, tag, "up-btn") != null;
+        if (!skip) {
+            search_pos = tag_end + 1;
+            continue;
+        }
+        const close = findClosingTag(html, tag_end + 1, "a") orelse break;
+        try out.appendSlice(gpa, html[cursor..anchor_start]);
+        cursor = close.end;
+        search_pos = close.end;
+    }
+    try out.appendSlice(gpa, html[cursor..]);
+    return try out.toOwnedSlice(gpa);
 }
 
 fn internalPageSummary(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
@@ -1135,6 +1229,15 @@ fn appendExternalAnnotation(
     try appendJsonField(gpa, out, "title", title orelse fallback_title, true);
     if (summary) |value| {
         try appendJsonField(gpa, out, "summary", value, true);
+        if (context_kind) |kind| {
+            if (std.mem.eql(u8, kind, "wikipedia")) {
+                const preview_html = try wikipediaSummaryPreviewHtml(gpa, value);
+                defer gpa.free(preview_html);
+                if (std.mem.trim(u8, preview_html, " \t\r\n").len != 0) {
+                    try appendJsonField(gpa, out, "preview_html", preview_html, true);
+                }
+            }
+        }
     } else {
         const fallback = try std.fmt.allocPrint(gpa, "External link to {s}.", .{site_name orelse "another site"});
         defer gpa.free(fallback);
@@ -1148,6 +1251,52 @@ fn appendExternalAnnotation(
         }
     }
     try appendJsonField(gpa, out, "archive", archive_path, false);
+}
+
+fn wikipediaSummaryPreviewHtml(gpa: std.mem.Allocator, summary: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var cursor: usize = 0;
+    var paragraph_count: usize = 0;
+    var first = true;
+    while (cursor < summary.len and paragraph_count < 3) {
+        while (cursor < summary.len and std.ascii.isWhitespace(summary[cursor])) : (cursor += 1) {}
+        if (cursor >= summary.len) break;
+        const remaining = summary[cursor..];
+        const sentence_end = sentenceBoundary(remaining) orelse remaining.len;
+        const paragraph = std.mem.trim(u8, remaining[0..sentence_end], " \t\r\n");
+        if (paragraph.len != 0) {
+            try out.appendSlice(gpa, "<p");
+            if (first) try out.appendSlice(gpa, " data-preview-lede=\"true\"");
+            try out.appendSlice(gpa, ">");
+            try appendHtmlEscaped(gpa, &out, paragraph);
+            try out.appendSlice(gpa, "</p>\n");
+            paragraph_count += 1;
+            first = false;
+        }
+        cursor += sentence_end;
+    }
+
+    if (paragraph_count == 0) {
+        try out.appendSlice(gpa, "<p>");
+        try appendHtmlEscaped(gpa, &out, summary);
+        try out.appendSlice(gpa, "</p>\n");
+    }
+    return try out.toOwnedSlice(gpa);
+}
+
+fn sentenceBoundary(text: []const u8) ?usize {
+    var i: usize = 0;
+    while (i < text.len) : (i += 1) {
+        const char = text[i];
+        if (char != '.' and char != '!' and char != '?') continue;
+        if (i >= 2 and text[i - 2] == '.' and std.ascii.isUpper(text[i - 1])) continue;
+        const after = i + 1;
+        if (after >= text.len) return after;
+        if (std.ascii.isWhitespace(text[after])) return after;
+    }
+    return null;
 }
 
 fn firstNonEmpty(values: []const ?[]const u8) ?[]const u8 {

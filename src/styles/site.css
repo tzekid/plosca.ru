@@ -1276,14 +1276,85 @@
     scrollbar-color: var(--color-code-scrollbar) transparent;
     scrollbar-width: thin;
   }
-  .link-preview__body p {
-    margin: 0;
+  .link-preview__content {
     color: var(--color-ink-soft);
     font-size: 0.86rem;
     line-height: 1.55;
   }
+  .link-preview__content > * {
+    margin-block: 0;
+  }
+  .link-preview__content > * + * {
+    margin-top: 0.58rem;
+  }
+  .link-preview__content h2,
+  .link-preview__content h3,
+  .link-preview__content h4 {
+    color: var(--color-brand-dark);
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-normal);
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+  .link-preview__content h2 {
+    font-size: 1.02rem;
+  }
+  .link-preview__content h3,
+  .link-preview__content h4 {
+    font-size: 0.95rem;
+  }
+  .link-preview__content p[data-preview-lede="true"] {
+    color: var(--color-ink);
+    font-size: 0.9rem;
+    line-height: 1.52;
+  }
+  .link-preview__content a {
+    color: var(--color-brand);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.12em;
+  }
+  .link-preview__content a:hover,
+  .link-preview__content a:focus-visible {
+    color: var(--color-brand-hover);
+  }
+  .link-preview__content ul,
+  .link-preview__content ol {
+    padding-left: 1.1rem;
+  }
+  .link-preview__content li + li {
+    margin-top: 0.22rem;
+  }
+  .link-preview__content blockquote {
+    border-left: 2px solid var(--color-brand-border-soft);
+    padding-left: 0.75rem;
+    color: var(--color-ink-muted);
+  }
+  .link-preview__content code,
+  .link-preview__content kbd {
+    border-radius: 0.25rem;
+    background: var(--color-code-inline-bg);
+    color: var(--color-code-inline);
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 0.05em 0.25em;
+  }
+  .link-preview__content pre {
+    max-width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+    background: var(--color-code-bg);
+    color: var(--color-code-text);
+    padding: 0.7rem 0.8rem;
+    white-space: pre-wrap;
+  }
+  .link-preview__content pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
   .link-preview--article .link-preview__body {
-    max-height: min(12rem, calc(100vh - 8rem));
+    max-height: min(18rem, calc(100vh - 8rem));
   }
   .link-preview--pdf .link-preview__body {
     max-height: min(72vh, calc(100vh - 7rem));
@@ -2123,7 +2194,7 @@
       max-height: min(46vh, calc(100vh - 7rem));
       padding: 0.62rem 0.78rem 0.68rem;
     }
-    .link-preview__body p {
+    .link-preview__content {
       font-size: 0.84rem;
       line-height: 1.48;
     }

@@ -201,6 +201,7 @@
                 <img src="${escapeHtml(annotation.preview_image)}"${previewWidth}${previewHeight} alt="${escapeHtml(annotation.title || annotation.text || "PDF")} preview" loading="lazy" decoding="async">
             </figure>`
             : "";
+        const previewBody = renderPreviewBody(annotation);
         box.innerHTML = `
             <div class="link-preview__header">
                 <div class="link-preview__title-row">
@@ -209,7 +210,7 @@
                 </div>
             </div>
             <div class="link-preview__body">
-                <p>${escapeHtml(annotation.summary || annotation.href)}</p>
+                <div class="link-preview__content">${previewBody}</div>
                 ${previewImage}
             </div>
             <small class="link-preview__meta">${meta}</small>
@@ -217,6 +218,71 @@
         box.querySelector(".link-preview__close")?.addEventListener("click", hidePreview);
         box.hidden = false;
         positionPreview(anchor);
+    };
+
+    const renderPreviewBody = (annotation) => {
+        if (annotation.preview_html) {
+            const sanitized = sanitizePreviewHtml(annotation.preview_html);
+            if (sanitized.trim()) return sanitized;
+        }
+        return `<p>${escapeHtml(annotation.summary || annotation.href)}</p>`;
+    };
+
+    const sanitizePreviewHtml = (html) => {
+        const template = document.createElement("template");
+        template.innerHTML = String(html);
+        const container = document.createElement("div");
+        template.content.childNodes.forEach((node) => {
+            const clean = sanitizePreviewNode(node);
+            if (clean) container.appendChild(clean);
+        });
+        return container.innerHTML;
+    };
+
+    const sanitizePreviewNode = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return document.createTextNode(node.textContent || "");
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return null;
+
+        const tag = node.tagName.toLowerCase();
+        if (tag === "script" || tag === "style" || tag === "iframe" || tag === "object") return null;
+        const allowed = new Set(["a", "blockquote", "br", "code", "em", "h2", "h3", "h4", "kbd", "li", "mark", "ol", "p", "pre", "strong", "ul"]);
+        if (!allowed.has(tag)) {
+            const fragment = document.createDocumentFragment();
+            node.childNodes.forEach((child) => {
+                const clean = sanitizePreviewNode(child);
+                if (clean) fragment.appendChild(clean);
+            });
+            return fragment;
+        }
+
+        const element = document.createElement(tag);
+        if (tag === "a") {
+            const href = node.getAttribute("href") || "";
+            if (isSafePreviewHref(href)) {
+                element.setAttribute("href", href);
+                if (/^https?:\/\//i.test(href)) element.setAttribute("rel", "noopener noreferrer");
+            }
+        }
+        if (node.getAttribute("data-preview-lede") === "true") {
+            element.dataset.previewLede = "true";
+        }
+        node.childNodes.forEach((child) => {
+            const clean = sanitizePreviewNode(child);
+            if (clean) element.appendChild(clean);
+        });
+        return element;
+    };
+
+    const isSafePreviewHref = (href) => {
+        if (!href || href.startsWith("#") || href.startsWith("/") || href.startsWith("./") || href.startsWith("../")) return true;
+        try {
+            const url = new URL(href, window.location.href);
+            return url.protocol === "http:" || url.protocol === "https:" || url.protocol === "mailto:";
+        } catch {
+            return false;
+        }
     };
 
     const escapeHtml = (value) => String(value)
