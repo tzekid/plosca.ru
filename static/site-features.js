@@ -261,19 +261,6 @@
             });
         });
         anchors.forEach((anchor) => {
-            anchor.addEventListener("click", async (event) => {
-                if (!prefersTouchPreview()) return;
-                if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                event.preventDefault();
-                const annotation = annotationsCache
-                    ? annotationFromData(annotationsCache, anchor)
-                    : await annotationFor(anchor);
-                if (annotation) {
-                    showPreview(anchor, { touch: true, annotation });
-                } else {
-                    window.location.href = anchor.href;
-                }
-            });
             anchor.addEventListener("pointerenter", () => {
                 if (!prefersTouchPreview()) showPreview(anchor);
             });
