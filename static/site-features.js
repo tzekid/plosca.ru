@@ -122,9 +122,11 @@
         }
 
         const box = ensurePreview();
-        const interactive = annotation.context_kind === "wikipedia";
+        const interactive = annotation.context_kind === "wikipedia" || annotation.kind === "internal";
         activeInteractive = interactive;
         box.classList.toggle("link-preview--interactive", interactive);
+        box.classList.toggle("link-preview--article", annotation.kind === "internal");
+        box.classList.toggle("link-preview--wikipedia", annotation.context_kind === "wikipedia");
         const source = escapeHtml(annotation.site_name || annotation.context_kind || annotation.kind || "link");
         const archive = annotation.archive
             ? `<a href="${escapeHtml(annotation.archive)}">archive record</a>`

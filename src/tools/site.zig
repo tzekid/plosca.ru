@@ -4,6 +4,8 @@ const Io = std.Io;
 
 const source_css_path = "src/styles/site.css";
 const generated_css_path = "static/style.css";
+const theme_js_path = "static/theme.js";
+const site_features_js_path = "static/site-features.js";
 const link_context_path = "src/content/link_context.json";
 const static_dir_path = "static";
 const metadata_dir_path = "static/metadata";
@@ -23,6 +25,12 @@ const link_title_limit = 140;
 const curl_user_agent = "plosca.ru-link-enricher/1.0 (+https://plosca.ru/about)";
 
 const CheckError = error{SiteCheckFailed};
+
+const AssetVersions = struct {
+    style: [16]u8,
+    theme: [16]u8,
+    site_features: [16]u8,
+};
 
 const PageKind = enum {
     home,
@@ -153,10 +161,13 @@ fn writeSite(io: Io, gpa: std.mem.Allocator) !void {
     try writeGeneratedMetadata(io, gpa);
     const enhanced = try syncHtmlEnhancements(io, gpa);
 
-    const version = styleVersion(css);
-    const updated = try syncHtmlStyleRefs(io, gpa, version, true);
-    const artifacts = try writeGeneratedArtifacts(io, gpa, version);
-    std.debug.print("style.css version {s}; updated {d} stylesheet ref(s), enhanced {d} HTML file(s), generated {d} metadata artifact(s)\n", .{ version[0..], updated, enhanced, artifacts });
+    const versions = try readAssetVersions(io, gpa, css);
+    const updated = try syncHtmlAssetRefs(io, gpa, versions, true);
+    const artifacts = try writeGeneratedArtifacts(io, gpa, versions);
+    std.debug.print(
+        "asset versions style={s} theme={s} site-features={s}; updated {d} asset ref(s), enhanced {d} HTML file(s), generated {d} metadata artifact(s)\n",
+        .{ versions.style[0..], versions.theme[0..], versions.site_features[0..], updated, enhanced, artifacts },
+    );
 }
 
 fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
@@ -175,20 +186,34 @@ fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
         failures += 1;
     }
 
-    const version = styleVersion(generated_css);
-    failures += try syncHtmlStyleRefs(io, gpa, version, false);
+    const versions = try readAssetVersions(io, gpa, generated_css);
+    failures += try syncHtmlAssetRefs(io, gpa, versions, false);
     failures += try checkGeneratedMetadata(io, gpa);
     failures += try checkGeneratedArtifacts(io, gpa);
     failures += try auditReferences(io, gpa, generated_css);
     failures += try auditContent(io, gpa);
 
     if (failures != 0) return CheckError.SiteCheckFailed;
-    std.debug.print("site check passed; style.css version {s}\n", .{version[0..]});
+    std.debug.print("site check passed; asset versions style={s} theme={s} site-features={s}\n", .{ versions.style[0..], versions.theme[0..], versions.site_features[0..] });
 }
 
-fn styleVersion(css: []const u8) [16]u8 {
+fn readAssetVersions(io: Io, gpa: std.mem.Allocator, css: []const u8) !AssetVersions {
+    const cwd = Io.Dir.cwd();
+    const theme_js = try cwd.readFileAlloc(io, theme_js_path, gpa, .limited(max_file_size));
+    defer gpa.free(theme_js);
+    const site_features_js = try cwd.readFileAlloc(io, site_features_js_path, gpa, .limited(max_file_size));
+    defer gpa.free(site_features_js);
+
+    return .{
+        .style = assetVersion(css),
+        .theme = assetVersion(theme_js),
+        .site_features = assetVersion(site_features_js),
+    };
+}
+
+fn assetVersion(contents: []const u8) [16]u8 {
     var hash = std.crypto.hash.sha2.Sha256.init(.{});
-    hash.update(css);
+    hash.update(contents);
     var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
     hash.final(&digest);
 
@@ -230,7 +255,7 @@ fn checkGeneratedMetadata(io: Io, gpa: std.mem.Allocator) !usize {
     return 0;
 }
 
-fn writeGeneratedArtifacts(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usize {
+fn writeGeneratedArtifacts(io: Io, gpa: std.mem.Allocator, versions: AssetVersions) !usize {
     const cwd = Io.Dir.cwd();
     try cwd.createDirPath(io, related_dir_path);
     try cwd.createDirPath(io, backlinks_dir_path);
@@ -273,7 +298,7 @@ fn writeGeneratedArtifacts(io: Io, gpa: std.mem.Allocator, style_version: [16]u8
     try cwd.writeFile(io, .{ .sub_path = external_links_json_path, .data = external_links });
     written += 1;
 
-    written += try writeArchivePages(io, gpa, style_version);
+    written += try writeArchivePages(io, gpa, versions);
     written += try writeTextAlternates(io, gpa);
     return written;
 }
@@ -1512,13 +1537,13 @@ fn isoTimestamp(io: Io, gpa: std.mem.Allocator) ![]u8 {
     );
 }
 
-fn writeArchivePages(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usize {
+fn writeArchivePages(io: Io, gpa: std.mem.Allocator, versions: AssetVersions) !usize {
     var urls: std.ArrayList([]u8) = .empty;
     defer freeStringList(gpa, &urls);
     try collectExternalLinks(io, gpa, &urls);
 
     var written: usize = 0;
-    const index = try renderArchiveIndex(gpa, urls.items, style_version);
+    const index = try renderArchiveIndex(gpa, urls.items, versions);
     defer gpa.free(index);
     try Io.Dir.cwd().writeFile(io, .{ .sub_path = archive_index_path, .data = index });
     written += 1;
@@ -1526,7 +1551,7 @@ fn writeArchivePages(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usi
     for (urls.items) |url| {
         const path = try archiveFilePath(gpa, url);
         defer gpa.free(path);
-        const page = try renderArchivePage(gpa, url, style_version);
+        const page = try renderArchivePage(gpa, url, versions);
         defer gpa.free(page);
         try Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = page });
         written += 1;
@@ -1534,10 +1559,10 @@ fn writeArchivePages(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usi
     return written;
 }
 
-fn renderArchiveIndex(gpa: std.mem.Allocator, urls: []const []const u8, style_version: [16]u8) ![]u8 {
+fn renderArchiveIndex(gpa: std.mem.Allocator, urls: []const []const u8, versions: AssetVersions) ![]u8 {
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
-    try appendGeneratedPageHead(gpa, &out, "External link archive registry", "Local metadata records for external links referenced by plosca.ru.", style_version);
+    try appendGeneratedPageHead(gpa, &out, "External link archive registry", "Local metadata records for external links referenced by plosca.ru.", versions);
     try out.appendSlice(gpa, "<main id=\"main\"><article><h1>External link archive registry</h1>\n");
     try out.appendSlice(gpa, "<p>This is a metadata registry, not a copy of third-party pages.</p>\n<ul>\n");
     for (urls) |url| {
@@ -1553,10 +1578,10 @@ fn renderArchiveIndex(gpa: std.mem.Allocator, urls: []const []const u8, style_ve
     return try out.toOwnedSlice(gpa);
 }
 
-fn renderArchivePage(gpa: std.mem.Allocator, url: []const u8, style_version: [16]u8) ![]u8 {
+fn renderArchivePage(gpa: std.mem.Allocator, url: []const u8, versions: AssetVersions) ![]u8 {
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
-    try appendGeneratedPageHead(gpa, &out, "Archive record", "Local metadata record for an external link referenced by plosca.ru.", style_version);
+    try appendGeneratedPageHead(gpa, &out, "Archive record", "Local metadata record for an external link referenced by plosca.ru.", versions);
     try out.appendSlice(gpa, "<main id=\"main\"><article><h1>Archive record</h1>\n");
     try out.appendSlice(gpa, "<p>This page records an external link target so old references remain understandable. It does not store or republish the third-party page.</p>\n");
     try out.appendSlice(gpa, "<dl><dt>URL</dt><dd><a href=\"");
@@ -1568,13 +1593,13 @@ fn renderArchivePage(gpa: std.mem.Allocator, url: []const u8, style_version: [16
     return try out.toOwnedSlice(gpa);
 }
 
-fn appendGeneratedPageHead(gpa: std.mem.Allocator, out: *std.ArrayList(u8), title: []const u8, description: []const u8, style_version: [16]u8) !void {
+fn appendGeneratedPageHead(gpa: std.mem.Allocator, out: *std.ArrayList(u8), title: []const u8, description: []const u8, versions: AssetVersions) !void {
     try out.appendSlice(gpa, "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\" />\n");
     try out.appendSlice(gpa, "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n<title>");
     try appendHtmlEscaped(gpa, out, title);
     try out.appendSlice(gpa, "</title>\n<meta name=\"description\" content=\"");
     try appendHtmlEscaped(gpa, out, description);
-    try out.print(gpa, "\" />\n<meta name=\"theme-color\" content=\"#ffffff\" />\n<script src=\"/theme.js\"></script>\n<link rel=\"stylesheet\" href=\"/style.css?v={s}\" />\n</head><body><span id=\"top\" aria-hidden=\"true\"></span>\n", .{style_version[0..]});
+    try out.print(gpa, "\" />\n<meta name=\"theme-color\" content=\"#ffffff\" />\n<script src=\"/theme.js?v={s}\"></script>\n<link rel=\"stylesheet\" href=\"/style.css?v={s}\" />\n</head><body><span id=\"top\" aria-hidden=\"true\"></span>\n", .{ versions.theme[0..], versions.style[0..] });
 }
 
 fn writeTextAlternates(io: Io, gpa: std.mem.Allocator) !usize {
@@ -1858,7 +1883,7 @@ fn rewriteHeadingAnchors(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
     return try out.toOwnedSlice(gpa);
 }
 
-fn syncHtmlStyleRefs(io: Io, gpa: std.mem.Allocator, version: [16]u8, write: bool) !usize {
+fn syncHtmlAssetRefs(io: Io, gpa: std.mem.Allocator, versions: AssetVersions, write: bool) !usize {
     var static_dir = try Io.Dir.cwd().openDir(io, static_dir_path, .{ .iterate = true });
     defer static_dir.close(io);
 
@@ -1870,7 +1895,7 @@ fn syncHtmlStyleRefs(io: Io, gpa: std.mem.Allocator, version: [16]u8, write: boo
         const html = try static_dir.readFileAlloc(io, entry.name, gpa, .limited(max_file_size));
         defer gpa.free(html);
 
-        const result = try rewriteStyleRefs(gpa, html, version);
+        const result = try rewriteAssetRefs(gpa, html, versions);
         defer gpa.free(result.html);
 
         if (write) {
@@ -1879,12 +1904,16 @@ fn syncHtmlStyleRefs(io: Io, gpa: std.mem.Allocator, version: [16]u8, write: boo
                 updated_or_failed += 1;
             }
         } else {
-            if (result.refs == 0) {
+            if (result.style_refs == 0) {
                 std.debug.print("static/{s}: no stylesheet href found\n", .{entry.name});
                 updated_or_failed += 1;
             }
+            if (result.theme_refs == 0) {
+                std.debug.print("static/{s}: no theme.js script found\n", .{entry.name});
+                updated_or_failed += 1;
+            }
             if (result.mismatches != 0) {
-                std.debug.print("static/{s}: stylesheet href is not /style.css?v={s}\n", .{ entry.name, version[0..] });
+                std.debug.print("static/{s}: first-party asset refs are not synchronized; run `zig build css`\n", .{entry.name});
                 updated_or_failed += result.mismatches;
             }
         }
@@ -1895,15 +1924,44 @@ fn syncHtmlStyleRefs(io: Io, gpa: std.mem.Allocator, version: [16]u8, write: boo
 
 const RewriteResult = struct {
     html: []u8,
+    style_refs: usize,
+    theme_refs: usize,
+    site_features_refs: usize,
+    mismatches: usize,
+};
+
+const SingleRewriteResult = struct {
+    html: []u8,
     refs: usize,
     mismatches: usize,
 };
 
-fn rewriteStyleRefs(gpa: std.mem.Allocator, html: []const u8, version: [16]u8) !RewriteResult {
-    const prefix = "href=";
-    const stylesheet = try std.fmt.allocPrint(gpa, "/style.css?v={s}", .{version[0..]});
+fn rewriteAssetRefs(gpa: std.mem.Allocator, html: []const u8, versions: AssetVersions) !RewriteResult {
+    const stylesheet = try std.fmt.allocPrint(gpa, "/style.css?v={s}", .{versions.style[0..]});
     defer gpa.free(stylesheet);
+    const theme = try std.fmt.allocPrint(gpa, "/theme.js?v={s}", .{versions.theme[0..]});
+    defer gpa.free(theme);
+    const site_features = try std.fmt.allocPrint(gpa, "/site-features.js?v={s}", .{versions.site_features[0..]});
+    defer gpa.free(site_features);
 
+    const style_result = try rewriteSingleAssetRef(gpa, html, "href=", "/style.css", stylesheet);
+    errdefer gpa.free(style_result.html);
+    const theme_result = try rewriteSingleAssetRef(gpa, style_result.html, "src=", "/theme.js", theme);
+    gpa.free(style_result.html);
+    errdefer gpa.free(theme_result.html);
+    const site_features_result = try rewriteSingleAssetRef(gpa, theme_result.html, "src=", "/site-features.js", site_features);
+    gpa.free(theme_result.html);
+
+    return .{
+        .html = site_features_result.html,
+        .style_refs = style_result.refs,
+        .theme_refs = theme_result.refs,
+        .site_features_refs = site_features_result.refs,
+        .mismatches = style_result.mismatches + theme_result.mismatches + site_features_result.mismatches,
+    };
+}
+
+fn rewriteSingleAssetRef(gpa: std.mem.Allocator, html: []const u8, attr: []const u8, base_ref: []const u8, versioned_ref: []const u8) !SingleRewriteResult {
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
 
@@ -1912,8 +1970,8 @@ fn rewriteStyleRefs(gpa: std.mem.Allocator, html: []const u8, version: [16]u8) !
     var refs: usize = 0;
     var mismatches: usize = 0;
 
-    while (std.mem.indexOfPos(u8, html, search_pos, prefix)) |href_pos| {
-        const quote_pos = href_pos + prefix.len;
+    while (std.mem.indexOfPos(u8, html, search_pos, attr)) |href_pos| {
+        const quote_pos = href_pos + attr.len;
         if (quote_pos >= html.len) break;
         const quote = html[quote_pos];
         if (quote != '"' and quote != '\'') {
@@ -1922,17 +1980,17 @@ fn rewriteStyleRefs(gpa: std.mem.Allocator, html: []const u8, version: [16]u8) !
         }
 
         const value_start = quote_pos + 1;
-        if (!std.mem.startsWith(u8, html[value_start..], "/style.css")) {
+        if (!std.mem.startsWith(u8, html[value_start..], base_ref)) {
             search_pos = value_start;
             continue;
         }
 
         const value_end = std.mem.indexOfScalarPos(u8, html, value_start, quote) orelse return error.InvalidHtml;
         refs += 1;
-        if (!std.mem.eql(u8, html[value_start..value_end], stylesheet)) mismatches += 1;
+        if (!std.mem.eql(u8, html[value_start..value_end], versioned_ref)) mismatches += 1;
 
         try out.appendSlice(gpa, html[cursor..value_start]);
-        try out.appendSlice(gpa, stylesheet);
+        try out.appendSlice(gpa, versioned_ref);
         cursor = value_end;
         search_pos = value_end + 1;
     }
