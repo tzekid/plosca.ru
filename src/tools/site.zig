@@ -1060,27 +1060,7 @@ fn internalPagePreviewHtml(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8
     const html = try readStaticFile(io, gpa, page.file);
     defer gpa.free(html);
 
-    const article = extractElement(html, "article") orelse html;
-    var body = article;
-    if (std.mem.indexOf(u8, body, "</header>")) |header_end| {
-        body = body[header_end + "</header>".len ..];
-    }
-    if (std.mem.indexOf(u8, body, "<nav id=\"TOC\"")) |toc_start| {
-        if (std.mem.indexOfPos(u8, body, toc_start, "</nav>")) |toc_end| {
-            if (std.mem.trim(u8, body[0..toc_start], " \t\r\n").len == 0) {
-                body = body[toc_end + "</nav>".len ..];
-            }
-        }
-    }
-    if (std.mem.indexOf(u8, body, "<section class=\"article-links\"")) |section_start| {
-        body = body[0..section_start];
-    }
-    if (std.mem.indexOf(u8, body, "<section class=\"generated-section\"")) |section_start| {
-        body = body[0..section_start];
-    }
-    if (std.mem.indexOf(u8, body, "<section class=\"article-generated\"")) |section_start| {
-        body = body[0..section_start];
-    }
+    const body = skipLeadingToc(internalPageBody(html));
 
     return try articleBlockPreviewHtml(gpa, body);
 }
@@ -1148,17 +1128,7 @@ fn internalPageSummary(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
     const html = try readStaticFile(io, gpa, page.file);
     defer gpa.free(html);
 
-    const article = extractElement(html, "article") orelse html;
-    var body = article;
-    if (std.mem.indexOf(u8, body, "</header>")) |header_end| {
-        body = body[header_end + "</header>".len ..];
-    }
-    if (std.mem.indexOf(u8, body, "<section class=\"article-links\"")) |section_start| {
-        body = body[0..section_start];
-    }
-    if (std.mem.indexOf(u8, body, "<section class=\"generated-section\"")) |section_start| {
-        body = body[0..section_start];
-    }
+    const body = internalPageBody(html);
 
     const paragraphs = try articleParagraphPreviewText(gpa, body);
     defer gpa.free(paragraphs);
@@ -1166,6 +1136,39 @@ fn internalPageSummary(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
         return try gpa.dupe(u8, page.description);
     }
     return try normalizePreviewText(gpa, paragraphs, internal_summary_limit);
+}
+
+fn internalPageBody(html: []const u8) []const u8 {
+    var body = extractElement(html, "article") orelse html;
+    if (std.mem.indexOf(u8, body, "</header>")) |header_end| {
+        body = body[header_end + "</header>".len ..];
+    }
+    return beforeGeneratedArticleSections(body);
+}
+
+fn skipLeadingToc(html: []const u8) []const u8 {
+    if (std.mem.indexOf(u8, html, "<nav id=\"TOC\"")) |toc_start| {
+        if (std.mem.indexOfPos(u8, html, toc_start, "</nav>")) |toc_end| {
+            if (std.mem.trim(u8, html[0..toc_start], " \t\r\n").len == 0) {
+                return html[toc_end + "</nav>".len ..];
+            }
+        }
+    }
+    return html;
+}
+
+fn beforeGeneratedArticleSections(html: []const u8) []const u8 {
+    var body = html;
+    if (std.mem.indexOf(u8, body, "<section class=\"article-links\"")) |section_start| {
+        body = body[0..section_start];
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"generated-section\"")) |section_start| {
+        body = body[0..section_start];
+    }
+    if (std.mem.indexOf(u8, body, "<section class=\"article-generated\"")) |section_start| {
+        body = body[0..section_start];
+    }
+    return body;
 }
 
 fn articleParagraphPreviewText(gpa: std.mem.Allocator, html: []const u8) ![]u8 {

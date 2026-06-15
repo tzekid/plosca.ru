@@ -1,7 +1,7 @@
 (() => {
     const annotationsUrl = "/metadata/annotations.json";
+    const previewHtmlTags = new Set(["a", "blockquote", "br", "code", "em", "h2", "h3", "h4", "kbd", "li", "mark", "ol", "p", "pre", "strong", "ul"]);
     let annotationsPromise = null;
-    let annotationsCache = null;
     let preview = null;
     let activeAnchor = null;
     let activeInteractive = false;
@@ -21,10 +21,6 @@
         if (!annotationsPromise) {
             annotationsPromise = fetch(annotationsUrl, { credentials: "same-origin" })
                 .then((response) => (response.ok ? response.json() : { annotations: [] }))
-                .then((data) => {
-                    annotationsCache = data;
-                    return data;
-                })
                 .catch(() => ({ annotations: [] }));
         }
         return annotationsPromise;
@@ -247,8 +243,7 @@
 
         const tag = node.tagName.toLowerCase();
         if (tag === "script" || tag === "style" || tag === "iframe" || tag === "object") return null;
-        const allowed = new Set(["a", "blockquote", "br", "code", "em", "h2", "h3", "h4", "kbd", "li", "mark", "ol", "p", "pre", "strong", "ul"]);
-        if (!allowed.has(tag)) {
+        if (!previewHtmlTags.has(tag)) {
             const fragment = document.createDocumentFragment();
             node.childNodes.forEach((child) => {
                 const clean = sanitizePreviewNode(child);
