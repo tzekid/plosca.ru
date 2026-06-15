@@ -1,9 +1,11 @@
 (() => {
     const annotationsUrl = "/metadata/annotations.json";
     let annotationsPromise = null;
+    let annotationsCache = null;
     let preview = null;
     let activeAnchor = null;
     let activeInteractive = false;
+    let activeTouchPreview = false;
     let previewPointerInside = false;
     let hideTimer = null;
 
@@ -19,6 +21,10 @@
         if (!annotationsPromise) {
             annotationsPromise = fetch(annotationsUrl, { credentials: "same-origin" })
                 .then((response) => (response.ok ? response.json() : { annotations: [] }))
+                .then((data) => {
+                    annotationsCache = data;
+                    return data;
+                })
                 .catch(() => ({ annotations: [] }));
         }
         return annotationsPromise;
@@ -37,10 +43,16 @@
         }
     };
 
-    const annotationFor = async (anchor) => {
+    const annotationFromData = (data, anchor) => {
         const href = normalizeHref(anchor);
-        const data = await fetchAnnotations();
         return (data.annotations || []).find((item) => item.href === href || item.href === anchor.getAttribute("href"));
+    };
+
+    const annotationFor = async (anchor) => annotationFromData(await fetchAnnotations(), anchor);
+
+    const prefersTouchPreview = () => {
+        if (!window.matchMedia) return false;
+        return window.matchMedia("(hover: none), (pointer: coarse)").matches;
     };
 
     const ensurePreview = () => {
@@ -86,6 +98,7 @@
         cancelHide();
         activeAnchor = null;
         activeInteractive = false;
+        activeTouchPreview = false;
         previewPointerInside = false;
         if (preview) preview.hidden = true;
     };
@@ -95,9 +108,19 @@
         const rect = anchor.getBoundingClientRect();
         const margin = 16;
         const isPdfPreview = box.classList.contains("link-preview--pdf");
+        if (box.classList.contains("link-preview--touch")) {
+            const width = Math.min(isPdfPreview ? 780 : 560, window.innerWidth - 24);
+            box.style.width = `${width}px`;
+            box.style.left = "50%";
+            box.style.top = "auto";
+            return;
+        }
+
         const targetWidth = isPdfPreview ? 780 : activeInteractive ? 560 : 420;
         const width = Math.min(targetWidth, window.innerWidth - margin * 2);
         box.style.width = `${width}px`;
+        box.style.bottom = "";
+        box.style.transform = "";
 
         const previewRect = box.getBoundingClientRect();
         const left = Math.min(
@@ -113,10 +136,10 @@
         box.style.top = `${top}px`;
     };
 
-    const showPreview = async (anchor) => {
+    const showPreview = async (anchor, options = {}) => {
         cancelHide();
         activeAnchor = anchor;
-        const annotation = await annotationFor(anchor);
+        const annotation = options.annotation || await annotationFor(anchor);
         if (activeAnchor !== anchor) return;
         if (!annotation) {
             hidePreview();
@@ -126,20 +149,28 @@
         const box = ensurePreview();
         const hasPreviewImage = Boolean(annotation.preview_image);
         const isPdfPreview = annotation.context_kind === "pdf" || annotation.kind === "pdf";
-        const interactive = annotation.context_kind === "wikipedia" || annotation.kind === "internal" || isPdfPreview;
+        const touchPreview = options.touch === true;
+        const interactive = touchPreview || annotation.context_kind === "wikipedia" || annotation.kind === "internal" || isPdfPreview;
         activeInteractive = interactive;
+        activeTouchPreview = touchPreview;
         box.classList.toggle("link-preview--interactive", interactive);
         box.classList.toggle("link-preview--article", annotation.kind === "internal");
         box.classList.toggle("link-preview--wikipedia", annotation.context_kind === "wikipedia");
         box.classList.toggle("link-preview--pdf", isPdfPreview);
+        box.classList.toggle("link-preview--touch", touchPreview);
         const source = escapeHtml(isPdfPreview ? "PDF" : annotation.site_name || annotation.context_kind || annotation.kind || "link");
         const date = annotation.date ? escapeHtml(formatDate(annotation.date)) : "";
         const fileSize = Number.isFinite(Number(annotation.file_size)) ? escapeHtml(formatBytes(Number(annotation.file_size))) : "";
         const archive = annotation.archive
             ? `<a href="${escapeHtml(annotation.archive)}">archive record</a>`
             : "";
-        const open = isPdfPreview ? `<a href="${escapeHtml(annotation.href)}">open PDF</a>` : "";
-        const meta = [source, date, fileSize, archive || open].filter(Boolean).join(" · ");
+        const open = isPdfPreview || touchPreview
+            ? `<a href="${escapeHtml(annotation.href)}">${isPdfPreview ? "open PDF" : "open link"}</a>`
+            : "";
+        const meta = [source, date, fileSize, archive, open].filter(Boolean).join(" · ");
+        const close = touchPreview
+            ? `<button class="link-preview__close" type="button" aria-label="Close preview">×</button>`
+            : "";
         const previewWidth = Number.isFinite(Number(annotation.preview_width)) ? ` width="${Number(annotation.preview_width)}"` : "";
         const previewHeight = Number.isFinite(Number(annotation.preview_height)) ? ` height="${Number(annotation.preview_height)}"` : "";
         const previewImage = hasPreviewImage
@@ -149,7 +180,10 @@
             : "";
         box.innerHTML = `
             <div class="link-preview__header">
-                <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
+                <div class="link-preview__title-row">
+                    <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
+                    ${close}
+                </div>
             </div>
             <div class="link-preview__body">
                 <p>${escapeHtml(annotation.summary || annotation.href)}</p>
@@ -157,6 +191,7 @@
             </div>
             <small class="link-preview__meta">${meta}</small>
         `;
+        box.querySelector(".link-preview__close")?.addEventListener("click", hidePreview);
         box.hidden = false;
         positionPreview(anchor);
     };
@@ -197,10 +232,33 @@
 
     const initAnnotations = () => {
         const anchors = document.querySelectorAll("main a[href]:not(.heading-anchor):not(.up-btn)");
+        fetchAnnotations().then((data) => {
+            anchors.forEach((anchor) => {
+                if (annotationFromData(data, anchor)) anchor.dataset.previewable = "true";
+            });
+        });
         anchors.forEach((anchor) => {
-            anchor.addEventListener("pointerenter", () => showPreview(anchor));
-            anchor.addEventListener("focus", () => showPreview(anchor));
+            anchor.addEventListener("click", async (event) => {
+                if (!prefersTouchPreview()) return;
+                if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                const annotation = annotationsCache
+                    ? annotationFromData(annotationsCache, anchor)
+                    : await annotationFor(anchor);
+                if (annotation) {
+                    showPreview(anchor, { touch: true, annotation });
+                } else {
+                    window.location.href = anchor.href;
+                }
+            });
+            anchor.addEventListener("pointerenter", () => {
+                if (!prefersTouchPreview()) showPreview(anchor);
+            });
+            anchor.addEventListener("focus", () => {
+                if (!prefersTouchPreview()) showPreview(anchor);
+            });
             anchor.addEventListener("pointerleave", () => {
+                if (activeTouchPreview) return;
                 if (activeInteractive && activeAnchor === anchor) {
                     scheduleHide();
                 } else {
@@ -208,6 +266,7 @@
                 }
             });
             anchor.addEventListener("blur", (event) => {
+                if (activeTouchPreview) return;
                 if (activeInteractive && preview && preview.contains(event.relatedTarget)) {
                     scheduleHide();
                 } else {
@@ -215,8 +274,15 @@
                 }
             });
         });
-        window.addEventListener("scroll", hidePreview, { passive: true });
+        window.addEventListener("scroll", () => {
+            if (!activeTouchPreview) hidePreview();
+        }, { passive: true });
         window.addEventListener("resize", hidePreview);
+        document.addEventListener("pointerdown", (event) => {
+            if (!activeTouchPreview || !preview || preview.hidden) return;
+            if (preview.contains(event.target) || activeAnchor?.contains(event.target)) return;
+            hidePreview();
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape") hidePreview();
         });

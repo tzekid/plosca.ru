@@ -414,7 +414,7 @@
     flex-shrink: 0;
   }
   .theme-toggle {
-    margin-right: calc(var(--spacing) * 3);
+    margin-left: calc(var(--spacing) * 6);
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
@@ -1209,6 +1209,16 @@
   .link-preview--pdf {
     max-height: min(88vh, calc(100vh - 2rem));
   }
+  .link-preview--touch {
+    right: auto;
+    bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+    left: 50% !important;
+    top: auto !important;
+    width: min(560px, calc(100vw - 1.5rem)) !important;
+    max-width: calc(100vw - 1.5rem);
+    max-height: min(72dvh, calc(100vh - 1.5rem));
+    transform: translateX(-50%);
+  }
   .link-preview__header,
   .link-preview__body,
   .link-preview__meta {
@@ -1221,14 +1231,41 @@
       linear-gradient(180deg, var(--color-preview-header-bg), var(--color-preview-bg));
     padding: 0.62rem 0.9rem 0.54rem;
   }
+  .link-preview__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
   .link-preview__header strong {
     display: block;
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: var(--font-display);
     font-size: 1.02rem;
     font-weight: var(--font-weight-normal);
     letter-spacing: 0;
     color: var(--color-brand-dark);
     line-height: 1.28;
+  }
+  .link-preview__close {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--color-brand-border-soft);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-brand);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .link-preview__close:hover,
+  .link-preview__close:focus-visible {
+    border-color: var(--color-brand-border);
+    color: var(--color-brand-hover);
   }
   .link-preview__body {
     flex: 1 1 auto;
@@ -1250,6 +1287,15 @@
   }
   .link-preview--pdf .link-preview__body {
     max-height: min(72vh, calc(100vh - 7rem));
+  }
+  .link-preview--touch .link-preview__body {
+    max-height: min(52dvh, calc(100vh - 8rem));
+  }
+  .link-preview--touch.link-preview--pdf .link-preview__body {
+    max-height: min(56dvh, calc(100vh - 8rem));
+  }
+  .link-preview--touch.link-preview--pdf {
+    width: min(760px, calc(100vw - 1.5rem)) !important;
   }
   .link-preview__figure {
     margin: 0.75rem 0 0;
@@ -1931,7 +1977,8 @@
       --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
       box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
       right: 1rem;
-      top: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 9999;
     }
     .nav-btn i {
@@ -1952,7 +1999,7 @@
       opacity: 1;
     }
     #nav:checked + .nav-btn {
-      transform: rotate(45deg);
+      transform: translateY(-50%) rotate(45deg);
     }
     #nav:checked + .nav-btn i {
       background-color: var(--color-brand);
@@ -2029,11 +2076,19 @@
       padding: 0;
     }
     code.sourceCode, pre.sourceCode {
-      font-size: 0.84rem;
-      line-height: 1.55;
+      font-size: clamp(0.72rem, 3.1vw, 0.82rem);
+      line-height: 1.62;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
     code.sourceCode {
-      padding: 0.9rem 1rem;
+      width: 100%;
+      min-width: 0;
+      padding: 0.82rem 0.9rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
     #TOC {
       margin-top: 26px;
@@ -2052,8 +2107,17 @@
     .link-preview {
       max-height: min(70vh, calc(100vh - 2rem));
     }
+    .link-preview--touch {
+      max-width: calc(100vw - 1.25rem);
+      width: calc(100vw - 1.25rem) !important;
+      max-height: min(74dvh, calc(100vh - 1.25rem));
+    }
     .link-preview__header {
       padding: 0.55rem 0.78rem 0.48rem;
+    }
+    .link-preview__close {
+      width: 1.8rem;
+      height: 1.8rem;
     }
     .link-preview__body {
       max-height: min(46vh, calc(100vh - 7rem));
