@@ -82,6 +82,32 @@ expect_status "/prose" 200
 expect_status "/missing-page" 404
 expect_status "/resume.pdf" 200
 expect_status "/site.webmanifest" 200
+expect_status "/site-features.js" 200
+expect_status "/metadata/annotations.json" 200
+if ! grep -q '"annotations"' "$tmp_dir/body"; then
+  echo "/metadata/annotations.json did not contain annotations data" >&2
+  exit 1
+fi
+expect_status "/metadata/connections/hello_world.html" 200
+if ! grep -q "Backlinks" "$tmp_dir/body"; then
+  echo "/metadata/connections/hello_world.html did not contain backlink section" >&2
+  exit 1
+fi
+expect_status "/archive" 200
+if ! grep -q "External link archive registry" "$tmp_dir/body"; then
+  echo "/archive did not contain archive registry copy" >&2
+  exit 1
+fi
+expect_status "/hello_world.md" 200
+if ! grep -q "Canonical: https://plosca.ru/hello_world" "$tmp_dir/body"; then
+  echo "/hello_world.md did not contain canonical metadata" >&2
+  exit 1
+fi
+expect_status "/prose.txt" 200
+if ! grep -q "Prose" "$tmp_dir/body"; then
+  echo "/prose.txt did not contain prose content" >&2
+  exit 1
+fi
 
 style_path="$(printf '%s' "$home_html" | grep -Eo '/style\.css\?v=[0-9a-f]{16}' | head -n 1 || true)"
 if [[ -z "$style_path" ]]; then

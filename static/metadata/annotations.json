@@ -1,0 +1,157 @@
+{
+  "annotations": [
+    {
+      "href": "https://www.linkedin.com/in/mircea-ilie-ploscaru/",
+      "text": "LinkedIn",
+      "kind": "external",
+      "source": "/about",
+      "source_title": "About",
+      "title": "LinkedIn",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/2000405390f6a649.html"
+    },
+    {
+      "href": "https://github.com/tzekid",
+      "text": "GitHub",
+      "kind": "external",
+      "source": "/about",
+      "source_title": "About",
+      "title": "GitHub",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/37527e48396d210f.html"
+    },
+    {
+      "href": "/resume.pdf",
+      "text": "Resume PDF",
+      "kind": "pdf",
+      "source": "/about",
+      "source_title": "About",
+      "title": "Resume PDF",
+      "summary": "Static asset or local route."
+    },
+    {
+      "href": "https://www.staticgen.com/",
+      "text": "static site generator",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "static site generator",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/155fda74a6e1d682.html"
+    },
+    {
+      "href": "https://en.wikipedia.org/wiki/Reinventing_the_wheel",
+      "text": "build my own",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "build my own",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/e4888b8bd8657028.html"
+    },
+    {
+      "href": "https://en.wikipedia.org/wiki/KISS_principle",
+      "text": "K.I.S.S.",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "K.I.S.S.",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/0540764735407c9c.html"
+    },
+    {
+      "href": "https://pandoc.org/demos.html",
+      "text": "pandoc",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "pandoc",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/b970deabe725255c.html"
+    },
+    {
+      "href": "https://youtu.be/bkgeFi4PwOg",
+      "text": "streams",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "streams",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/139d5101e58c2a7b.html"
+    },
+    {
+      "href": "http://eradman.com/entrproject/",
+      "text": "entr",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "entr",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/476664c3bfc8078c.html"
+    },
+    {
+      "href": "https://en.wikipedia.org/wiki/Wc_(Unix)",
+      "text": "wc",
+      "kind": "external",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "wc",
+      "summary": "External link recorded by the static site generator.",
+      "archive": "/archive/d41b867a3dbbe912.html"
+    },
+    {
+      "href": "/prose",
+      "text": "Prose",
+      "kind": "internal",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "Prose",
+      "summary": "Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples."
+    },
+    {
+      "href": "/about",
+      "text": "About",
+      "kind": "internal",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "About",
+      "summary": "About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation."
+    },
+    {
+      "href": "/metadata/connections/hello_world.html",
+      "text": "View generated backlinks and similar pages.",
+      "kind": "asset",
+      "source": "/hello_world",
+      "source_title": "Hello World",
+      "title": "View generated backlinks and similar pages.",
+      "summary": "Static asset or local route."
+    },
+    {
+      "href": "/hello_world",
+      "text": "Hello World",
+      "kind": "internal",
+      "source": "/prose",
+      "source_title": "Prose",
+      "title": "Hello World",
+      "summary": "Hello World: first post by Ilie Ploscaru introducing the site and its themes."
+    },
+    {
+      "href": "/",
+      "text": "Home",
+      "kind": "internal",
+      "source": "/prose",
+      "source_title": "Prose",
+      "title": "Ilie Ploscaru",
+      "summary": "Personal site of Ilie Ploscaru, interested in psychology and tech."
+    },
+    {
+      "href": "/metadata/connections/prose.html",
+      "text": "View generated backlinks and similar pages.",
+      "kind": "asset",
+      "source": "/prose",
+      "source_title": "Prose",
+      "title": "View generated backlinks and similar pages.",
+      "summary": "Static asset or local route."
+    }
+  ]
+}

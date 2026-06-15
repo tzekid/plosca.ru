@@ -22,15 +22,15 @@ Scope note: large Gwern.net features are implemented in a `plosca.ru`-scaled for
 | Better 404 recovery | quick win | completed | Reworked `404.html` with clearer recovery copy and visible links to home, about, article, and prose. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Article related links | quick win | completed | Added quiet related-link sections to `/hello_world` and `/prose`, styled in the editorial system. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Keep theme simple | quick win | completed | Left the existing session-lifetime `/theme.js` model in place and intentionally avoided a Gwern-style toolbar or persistent localStorage setting. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
-| Generated backlinks | medium | pending | Generate local backlink snippets from static HTML links. | generated snippet checks | pending |
+| Generated backlinks | medium | completed | `zig build css` now generates `static/metadata/backlinks/*.html` and combined connection fragments from local in-page links. | `zig build css`, `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | CSS-only sidenotes | medium | completed | Added `.footnotes`, `.sidenote`, and `.margin-note` styling that stays inline on small screens and can float into the right margin on wide article layouts. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Native collapses | medium | completed | Added native `details`/`summary` article styling with keyboard-visible focus and no custom state code. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
-| Markdown/text alternates | medium | pending | Generate or serve text/Markdown alternates for article pages. | curl alternate files and check-site references | pending |
+| Markdown/text alternates | medium | completed | Generated `/hello_world.md`, `/hello_world.txt`, `/prose.md`, and `/prose.txt`; added alternate links in article heads and `.md` content-type support in the Zig server. | `zig build test`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Link-type markers | medium | completed | Added CSS-only external and PDF markers scoped to article content, excluding TOC, heading anchors, related blocks, and button-style links. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
-| Annotation DB and previews | large | pending | Generate a small annotation database and first-party hover/focus previews. | JS/no-JS smoke, asset check | pending |
-| Client-side transclusion | large | pending | Add a minimal fragment transclusion utility with no required dependency. | transclusion fragment smoke | pending |
-| Similar-link generation | large | pending | Generate similar links from metadata/body terms. | deterministic generated output check | pending |
-| Local external-link archive registry | large | pending | Generate local archive metadata/recovery pages without committing external page copies. | archive page/link checks | pending |
+| Annotation DB and previews | large | completed | Generated `static/metadata/annotations.json` and added dependency-free `/site-features.js` hover/focus link previews that degrade to normal links. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
+| Client-side transclusion | large | completed | Added `[data-transclude]` support in `/site-features.js` and article-page generated-context containers that load `static/metadata/connections/*.html` fragments. | `./scripts/smoke.sh` | ready for slice commit/publish |
+| Similar-link generation | large | completed | Generated `static/metadata/similar/*.html` from manifest tag overlap and explicit related-link relationships. | `zig build css`, generated output review | ready for slice commit/publish |
+| Local external-link archive registry | large | completed | Generated `static/metadata/external-links.json`, `/archive`, and one local archive-record page per external URL, without copying third-party content. | `./scripts/smoke.sh`, generated output review | ready for slice commit/publish |
 
 Primary live sources:
 

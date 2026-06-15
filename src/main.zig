@@ -471,6 +471,7 @@ fn contentTypeFor(path: []const u8) []const u8 {
     if (std.ascii.eqlIgnoreCase(ext, ".json")) return "application/json; charset=utf-8";
     if (std.ascii.eqlIgnoreCase(ext, ".webmanifest")) return "application/manifest+json; charset=utf-8";
     if (std.ascii.eqlIgnoreCase(ext, ".xml")) return "application/xml; charset=utf-8";
+    if (std.ascii.eqlIgnoreCase(ext, ".md")) return "text/markdown; charset=utf-8";
     if (std.ascii.eqlIgnoreCase(ext, ".txt")) return "text/plain; charset=utf-8";
     if (std.ascii.eqlIgnoreCase(ext, ".pdf")) return "application/pdf";
     if (std.ascii.eqlIgnoreCase(ext, ".png")) return "image/png";
@@ -486,6 +487,8 @@ fn contentTypeFor(path: []const u8) []const u8 {
 fn cacheControlFor(path: []const u8) []const u8 {
     const ext = std.fs.path.extension(path);
     if (std.ascii.eqlIgnoreCase(ext, ".html")) return cache_html;
+    if (std.ascii.eqlIgnoreCase(ext, ".md")) return cache_html;
+    if (std.ascii.eqlIgnoreCase(ext, ".txt")) return cache_html;
     if (std.ascii.eqlIgnoreCase(ext, ".css")) return cache_immutable;
     if (std.ascii.eqlIgnoreCase(ext, ".webmanifest")) return cache_immutable;
     if (std.ascii.eqlIgnoreCase(ext, ".pdf")) return cache_immutable;
@@ -692,6 +695,7 @@ test "normalize rejects traversal and overly long paths" {
 
 test "content type and cache policy mapping" {
     try std.testing.expectEqualStrings("text/html; charset=utf-8", contentTypeFor("index.html"));
+    try std.testing.expectEqualStrings("text/markdown; charset=utf-8", contentTypeFor("hello_world.md"));
     try std.testing.expectEqualStrings("font/woff2", contentTypeFor("font.woff2"));
     try std.testing.expectEqualStrings("application/octet-stream", contentTypeFor("file.bin"));
     try std.testing.expectEqualStrings(cache_html, cacheControlFor("index.html"));

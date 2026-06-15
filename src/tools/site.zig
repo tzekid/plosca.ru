@@ -7,6 +7,14 @@ const generated_css_path = "static/style.css";
 const static_dir_path = "static";
 const metadata_dir_path = "static/metadata";
 const pages_json_path = "static/metadata/pages.json";
+const related_dir_path = "static/metadata/related";
+const backlinks_dir_path = "static/metadata/backlinks";
+const similar_dir_path = "static/metadata/similar";
+const connections_dir_path = "static/metadata/connections";
+const annotations_json_path = "static/metadata/annotations.json";
+const external_links_json_path = "static/metadata/external-links.json";
+const archive_dir_path = "static/archive";
+const archive_index_path = "static/archive/index.html";
 const max_file_size = 16 * 1024 * 1024;
 
 const CheckError = error{SiteCheckFailed};
@@ -139,7 +147,8 @@ fn writeSite(io: Io, gpa: std.mem.Allocator) !void {
 
     const version = styleVersion(css);
     const updated = try syncHtmlStyleRefs(io, gpa, version, true);
-    std.debug.print("style.css version {s}; updated {d} stylesheet ref(s), enhanced {d} HTML file(s), generated page metadata\n", .{ version[0..], updated, enhanced });
+    const artifacts = try writeGeneratedArtifacts(io, gpa, version);
+    std.debug.print("style.css version {s}; updated {d} stylesheet ref(s), enhanced {d} HTML file(s), generated {d} metadata artifact(s)\n", .{ version[0..], updated, enhanced, artifacts });
 }
 
 fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
@@ -161,6 +170,7 @@ fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
     const version = styleVersion(generated_css);
     failures += try syncHtmlStyleRefs(io, gpa, version, false);
     failures += try checkGeneratedMetadata(io, gpa);
+    failures += try checkGeneratedArtifacts(io, gpa);
     failures += try auditReferences(io, gpa, generated_css);
     failures += try auditContent(io, gpa);
 
@@ -210,6 +220,110 @@ fn checkGeneratedMetadata(io: Io, gpa: std.mem.Allocator) !usize {
         return 1;
     }
     return 0;
+}
+
+fn writeGeneratedArtifacts(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usize {
+    const cwd = Io.Dir.cwd();
+    try cwd.createDirPath(io, related_dir_path);
+    try cwd.createDirPath(io, backlinks_dir_path);
+    try cwd.createDirPath(io, similar_dir_path);
+    try cwd.createDirPath(io, connections_dir_path);
+    try cwd.createDirPath(io, archive_dir_path);
+
+    var written: usize = 0;
+    for (pages) |page| {
+        if (page.kind == .error_page) continue;
+
+        const related = try renderRelatedFragment(gpa, page);
+        defer gpa.free(related);
+        try writeGeneratedForPage(io, gpa, related_dir_path, page, related);
+        written += 1;
+
+        const backlinks = try renderBacklinksFragment(io, gpa, page);
+        defer gpa.free(backlinks);
+        try writeGeneratedForPage(io, gpa, backlinks_dir_path, page, backlinks);
+        written += 1;
+
+        const similar = try renderSimilarFragment(gpa, page);
+        defer gpa.free(similar);
+        try writeGeneratedForPage(io, gpa, similar_dir_path, page, similar);
+        written += 1;
+
+        const connections = try renderConnectionsFragment(io, gpa, page);
+        defer gpa.free(connections);
+        try writeGeneratedForPage(io, gpa, connections_dir_path, page, connections);
+        written += 1;
+    }
+
+    const annotations = try renderAnnotationsJson(io, gpa);
+    defer gpa.free(annotations);
+    try cwd.writeFile(io, .{ .sub_path = annotations_json_path, .data = annotations });
+    written += 1;
+
+    const external_links = try renderExternalLinksJson(io, gpa);
+    defer gpa.free(external_links);
+    try cwd.writeFile(io, .{ .sub_path = external_links_json_path, .data = external_links });
+    written += 1;
+
+    written += try writeArchivePages(io, gpa, style_version);
+    written += try writeTextAlternates(io, gpa);
+    return written;
+}
+
+fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
+    var failures: usize = 0;
+
+    const required_paths = [_][]const u8{
+        annotations_json_path,
+        external_links_json_path,
+        archive_index_path,
+    };
+    for (required_paths) |path| {
+        if (!try fileExists(io, gpa, path)) {
+            std.debug.print("{s} is missing; run `zig build css`\n", .{path});
+            failures += 1;
+        }
+    }
+
+    for (pages) |page| {
+        if (page.kind == .error_page) continue;
+        failures += try checkGeneratedPageArtifact(io, gpa, related_dir_path, page);
+        failures += try checkGeneratedPageArtifact(io, gpa, backlinks_dir_path, page);
+        failures += try checkGeneratedPageArtifact(io, gpa, similar_dir_path, page);
+        failures += try checkGeneratedPageArtifact(io, gpa, connections_dir_path, page);
+
+        if (page.kind == .article or page.kind == .prose) {
+            const markdown_path = try std.fmt.allocPrint(gpa, "static/{s}.md", .{page.slug});
+            defer gpa.free(markdown_path);
+            const text_path = try std.fmt.allocPrint(gpa, "static/{s}.txt", .{page.slug});
+            defer gpa.free(text_path);
+            if (!try fileExists(io, gpa, markdown_path)) {
+                std.debug.print("{s} is missing; run `zig build css`\n", .{markdown_path});
+                failures += 1;
+            }
+            if (!try fileExists(io, gpa, text_path)) {
+                std.debug.print("{s} is missing; run `zig build css`\n", .{text_path});
+                failures += 1;
+            }
+        }
+    }
+    return failures;
+}
+
+fn checkGeneratedPageArtifact(io: Io, gpa: std.mem.Allocator, dir_path: []const u8, page: PageMeta) !usize {
+    const path = try std.fmt.allocPrint(gpa, "{s}/{s}.html", .{ dir_path, page.slug });
+    defer gpa.free(path);
+    if (!try fileExists(io, gpa, path)) {
+        std.debug.print("{s} is missing; run `zig build css`\n", .{path});
+        return 1;
+    }
+    return 0;
+}
+
+fn writeGeneratedForPage(io: Io, gpa: std.mem.Allocator, dir_path: []const u8, page: PageMeta, data: []const u8) !void {
+    const path = try std.fmt.allocPrint(gpa, "{s}/{s}.html", .{ dir_path, page.slug });
+    defer gpa.free(path);
+    try Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = data });
 }
 
 fn renderPagesJson(gpa: std.mem.Allocator) ![]u8 {
@@ -304,6 +418,627 @@ fn appendJsonString(gpa: std.mem.Allocator, out: *std.ArrayList(u8), value: []co
         }
     }
     try out.append(gpa, '"');
+}
+
+fn renderRelatedFragment(gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    try appendPageListSection(gpa, &out, "Related", "Pages explicitly connected to this page.", page.related);
+    return try out.toOwnedSlice(gpa);
+}
+
+fn renderBacklinksFragment(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    try out.appendSlice(gpa, "<section class=\"generated-section generated-backlinks\">\n");
+    try out.appendSlice(gpa, "  <h3>Backlinks</h3>\n");
+    try out.appendSlice(gpa, "  <p>Local pages that link here.</p>\n");
+    try out.appendSlice(gpa, "  <ul>\n");
+
+    var count: usize = 0;
+    for (pages) |source| {
+        if (source.kind == .error_page or std.mem.eql(u8, source.slug, page.slug)) continue;
+        if (try pageLinksTo(io, gpa, source, page.route)) {
+            try out.appendSlice(gpa, "    <li><a href=\"");
+            try appendHtmlEscaped(gpa, &out, source.route);
+            try out.appendSlice(gpa, "\">");
+            try appendHtmlEscaped(gpa, &out, source.title);
+            try out.appendSlice(gpa, "</a><span>");
+            try appendHtmlEscaped(gpa, &out, source.description);
+            try out.appendSlice(gpa, "</span></li>\n");
+            count += 1;
+        }
+    }
+
+    if (count == 0) {
+        try out.appendSlice(gpa, "    <li><span>No local backlinks yet.</span></li>\n");
+    }
+    try out.appendSlice(gpa, "  </ul>\n</section>\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn renderSimilarFragment(gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    try out.appendSlice(gpa, "<section class=\"generated-section generated-similar\">\n");
+    try out.appendSlice(gpa, "  <h3>Similar</h3>\n");
+    try out.appendSlice(gpa, "  <p>Small tag-based suggestions from the local manifest.</p>\n");
+    try out.appendSlice(gpa, "  <ul>\n");
+
+    var count: usize = 0;
+    for (pages) |candidate| {
+        if (candidate.kind == .error_page or std.mem.eql(u8, candidate.slug, page.slug)) continue;
+        if (similarityScore(page, candidate) == 0) continue;
+        try out.appendSlice(gpa, "    <li><a href=\"");
+        try appendHtmlEscaped(gpa, &out, candidate.route);
+        try out.appendSlice(gpa, "\">");
+        try appendHtmlEscaped(gpa, &out, candidate.title);
+        try out.appendSlice(gpa, "</a><span>");
+        try appendHtmlEscaped(gpa, &out, candidate.description);
+        try out.appendSlice(gpa, "</span></li>\n");
+        count += 1;
+    }
+
+    if (count == 0) {
+        try out.appendSlice(gpa, "    <li><span>No similar local pages yet.</span></li>\n");
+    }
+    try out.appendSlice(gpa, "  </ul>\n</section>\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn renderConnectionsFragment(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    const related = try renderRelatedFragment(gpa, page);
+    defer gpa.free(related);
+    const backlinks = try renderBacklinksFragment(io, gpa, page);
+    defer gpa.free(backlinks);
+    const similar = try renderSimilarFragment(gpa, page);
+    defer gpa.free(similar);
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    try out.appendSlice(gpa, "<div class=\"generated-connections\">\n");
+    try out.appendSlice(gpa, related);
+    try out.appendSlice(gpa, backlinks);
+    try out.appendSlice(gpa, similar);
+    try out.appendSlice(gpa, "</div>\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn appendPageListSection(
+    gpa: std.mem.Allocator,
+    out: *std.ArrayList(u8),
+    heading: []const u8,
+    intro: []const u8,
+    routes: []const []const u8,
+) !void {
+    try out.appendSlice(gpa, "<section class=\"generated-section generated-related\">\n");
+    try out.appendSlice(gpa, "  <h3>");
+    try appendHtmlEscaped(gpa, out, heading);
+    try out.appendSlice(gpa, "</h3>\n  <p>");
+    try appendHtmlEscaped(gpa, out, intro);
+    try out.appendSlice(gpa, "</p>\n  <ul>\n");
+    if (routes.len == 0) {
+        try out.appendSlice(gpa, "    <li><span>No related pages yet.</span></li>\n");
+    } else {
+        for (routes) |route| {
+            try out.appendSlice(gpa, "    <li><a href=\"");
+            try appendHtmlEscaped(gpa, out, route);
+            try out.appendSlice(gpa, "\">");
+            if (pageByRoute(route)) |target| {
+                try appendHtmlEscaped(gpa, out, target.title);
+                try out.appendSlice(gpa, "</a><span>");
+                try appendHtmlEscaped(gpa, out, target.description);
+                try out.appendSlice(gpa, "</span>");
+            } else {
+                try appendHtmlEscaped(gpa, out, route);
+                try out.appendSlice(gpa, "</a>");
+            }
+            try out.appendSlice(gpa, "</li>\n");
+        }
+    }
+    try out.appendSlice(gpa, "  </ul>\n</section>\n");
+}
+
+fn similarityScore(a: PageMeta, b: PageMeta) usize {
+    var score: usize = 0;
+    for (a.tags) |tag_a| {
+        for (b.tags) |tag_b| {
+            if (std.mem.eql(u8, tag_a, tag_b)) score += 1;
+        }
+    }
+    for (a.related) |route| {
+        if (std.mem.eql(u8, route, b.route)) score += 2;
+    }
+    for (b.related) |route| {
+        if (std.mem.eql(u8, route, a.route)) score += 1;
+    }
+    return score;
+}
+
+fn pageByRoute(route: []const u8) ?PageMeta {
+    const normalized = normalizedRoute(route);
+    for (pages) |page| {
+        if (std.mem.eql(u8, page.route, normalized)) return page;
+    }
+    return null;
+}
+
+fn normalizedRoute(raw: []const u8) []const u8 {
+    var value = raw;
+    if (std.mem.indexOfAny(u8, value, "?#")) |index| value = value[0..index];
+    if (std.mem.endsWith(u8, value, ".html")) value = value[0 .. value.len - ".html".len];
+    if (std.mem.eql(u8, value, "/index")) return "/";
+    return value;
+}
+
+fn pageLinksTo(io: Io, gpa: std.mem.Allocator, source: PageMeta, target_route: []const u8) !bool {
+    const html = try readStaticFile(io, gpa, source.file);
+    defer gpa.free(html);
+    const main_html = extractElement(html, "main") orelse html;
+
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, main_html, search_pos, "href=")) |href_pos| {
+        const quote_pos = href_pos + "href=".len;
+        if (quote_pos >= main_html.len) break;
+        const quote = main_html[quote_pos];
+        if (quote != '"' and quote != '\'') {
+            search_pos = quote_pos + 1;
+            continue;
+        }
+
+        const value_start = quote_pos + 1;
+        const value_end = std.mem.indexOfScalarPos(u8, main_html, value_start, quote) orelse return error.InvalidHtml;
+        const raw = main_html[value_start..value_end];
+        if (std.mem.eql(u8, normalizedRoute(raw), target_route)) return true;
+        search_pos = value_end + 1;
+    }
+
+    return false;
+}
+
+fn readStaticFile(io: Io, gpa: std.mem.Allocator, file_name: []const u8) ![]u8 {
+    const path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ static_dir_path, file_name });
+    defer gpa.free(path);
+    return try Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(max_file_size));
+}
+
+fn extractElement(html: []const u8, tag_name: []const u8) ?[]const u8 {
+    const open = std.fmt.allocPrint(std.heap.page_allocator, "<{s}", .{tag_name}) catch return null;
+    defer std.heap.page_allocator.free(open);
+    const close = std.fmt.allocPrint(std.heap.page_allocator, "</{s}>", .{tag_name}) catch return null;
+    defer std.heap.page_allocator.free(close);
+
+    const open_start = std.mem.indexOf(u8, html, open) orelse return null;
+    const open_end = std.mem.indexOfScalarPos(u8, html, open_start, '>') orelse return null;
+    const close_start = std.mem.indexOfPos(u8, html, open_end + 1, close) orelse return null;
+    return html[open_end + 1 .. close_start];
+}
+
+fn appendHtmlEscaped(gpa: std.mem.Allocator, out: *std.ArrayList(u8), value: []const u8) !void {
+    for (value) |char| {
+        switch (char) {
+            '&' => try out.appendSlice(gpa, "&amp;"),
+            '<' => try out.appendSlice(gpa, "&lt;"),
+            '>' => try out.appendSlice(gpa, "&gt;"),
+            '"' => try out.appendSlice(gpa, "&quot;"),
+            '\'' => try out.appendSlice(gpa, "&#39;"),
+            else => try out.append(gpa, char),
+        }
+    }
+}
+
+fn renderAnnotationsJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    var seen: std.ArrayList([]u8) = .empty;
+    defer freeStringList(gpa, &seen);
+
+    try out.appendSlice(gpa, "{\n  \"annotations\": [\n");
+    var count: usize = 0;
+    for (pages) |page| {
+        if (page.kind == .error_page) continue;
+        const html = try readStaticFile(io, gpa, page.file);
+        defer gpa.free(html);
+        const main_html = extractElement(html, "main") orelse html;
+        try appendAnnotationsFromHtml(gpa, &out, &seen, page, main_html, &count);
+    }
+    try out.appendSlice(gpa, "\n  ]\n}\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn renderExternalLinksJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    var seen: std.ArrayList([]u8) = .empty;
+    defer freeStringList(gpa, &seen);
+
+    try out.appendSlice(gpa, "{\n  \"external_links\": [\n");
+    var count: usize = 0;
+    try collectExternalLinks(io, gpa, &seen);
+    for (seen.items) |url| {
+        if (count != 0) try out.appendSlice(gpa, ",\n");
+        const archive_path = try archivePath(gpa, url);
+        defer gpa.free(archive_path);
+        try out.appendSlice(gpa, "    {\n");
+        try appendJsonField(gpa, &out, "url", url, true);
+        try appendJsonField(gpa, &out, "archive", archive_path, false);
+        try out.appendSlice(gpa, "    }");
+        count += 1;
+    }
+    try out.appendSlice(gpa, "\n  ]\n}\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn appendAnnotationsFromHtml(
+    gpa: std.mem.Allocator,
+    out: *std.ArrayList(u8),
+    seen: *std.ArrayList([]u8),
+    page: PageMeta,
+    html: []const u8,
+    count: *usize,
+) !void {
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<a")) |anchor_start| {
+        if (isInsideHtmlComment(html, anchor_start)) {
+            search_pos = anchor_start + "<a".len;
+            continue;
+        }
+        const tag_end = std.mem.indexOfScalarPos(u8, html, anchor_start, '>') orelse break;
+        const close = findClosingTag(html, tag_end + 1, "a") orelse break;
+        const tag = html[anchor_start..tag_end];
+        if (std.mem.indexOf(u8, tag, "heading-anchor") != null) {
+            search_pos = close.end;
+            continue;
+        }
+        const href = attributeValue(tag, "href") orelse {
+            search_pos = close.end;
+            continue;
+        };
+        if (href.len == 0 or href[0] == '#' or std.mem.startsWith(u8, href, "mailto:")) {
+            search_pos = close.end;
+            continue;
+        }
+        if (containsString(seen.items, href)) {
+            search_pos = close.end;
+            continue;
+        }
+
+        const text = try htmlText(gpa, html[tag_end + 1 .. close.start]);
+        defer gpa.free(text);
+        if (std.mem.trim(u8, text, " \t\r\n").len == 0) {
+            search_pos = close.end;
+            continue;
+        }
+
+        try seen.append(gpa, try gpa.dupe(u8, href));
+        if (count.* != 0) try out.appendSlice(gpa, ",\n");
+        try appendAnnotationObject(gpa, out, page, href, text);
+        count.* += 1;
+        search_pos = close.end;
+    }
+}
+
+fn appendAnnotationObject(
+    gpa: std.mem.Allocator,
+    out: *std.ArrayList(u8),
+    source_page: PageMeta,
+    href: []const u8,
+    text: []const u8,
+) !void {
+    const kind = linkKind(href);
+    const trimmed_text = std.mem.trim(u8, text, " \t\r\n");
+    try out.appendSlice(gpa, "    {\n");
+    try appendJsonField(gpa, out, "href", href, true);
+    try appendJsonField(gpa, out, "text", trimmed_text, true);
+    try appendJsonField(gpa, out, "kind", kind, true);
+    try appendJsonField(gpa, out, "source", source_page.route, true);
+    try appendJsonField(gpa, out, "source_title", source_page.title, true);
+    if (pageByRoute(href)) |target| {
+        try appendJsonField(gpa, out, "title", target.title, true);
+        try appendJsonField(gpa, out, "summary", target.description, false);
+    } else if (std.mem.eql(u8, kind, "external")) {
+        const archive_path = try archivePath(gpa, href);
+        defer gpa.free(archive_path);
+        try appendJsonField(gpa, out, "title", trimmed_text, true);
+        try appendJsonField(gpa, out, "summary", "External link recorded by the static site generator.", true);
+        try appendJsonField(gpa, out, "archive", archive_path, false);
+    } else {
+        try appendJsonField(gpa, out, "title", trimmed_text, true);
+        try appendJsonField(gpa, out, "summary", "Static asset or local route.", false);
+    }
+    try out.appendSlice(gpa, "    }");
+}
+
+fn linkKind(href: []const u8) []const u8 {
+    if (std.mem.startsWith(u8, href, "http://") or std.mem.startsWith(u8, href, "https://")) return "external";
+    if (std.mem.endsWith(u8, href, ".pdf")) return "pdf";
+    if (pageByRoute(href) != null) return "internal";
+    return "asset";
+}
+
+fn collectExternalLinks(io: Io, gpa: std.mem.Allocator, urls: *std.ArrayList([]u8)) !void {
+    for (pages) |page| {
+        if (page.kind == .error_page) continue;
+        const html = try readStaticFile(io, gpa, page.file);
+        defer gpa.free(html);
+        const main_html = extractElement(html, "main") orelse html;
+        var search_pos: usize = 0;
+        while (std.mem.indexOfPos(u8, main_html, search_pos, "href=")) |href_pos| {
+            const quote_pos = href_pos + "href=".len;
+            if (quote_pos >= main_html.len) break;
+            const quote = main_html[quote_pos];
+            if (quote != '"' and quote != '\'') {
+                search_pos = quote_pos + 1;
+                continue;
+            }
+            const value_start = quote_pos + 1;
+            const value_end = std.mem.indexOfScalarPos(u8, main_html, value_start, quote) orelse return error.InvalidHtml;
+            const href = main_html[value_start..value_end];
+            if ((std.mem.startsWith(u8, href, "http://") or std.mem.startsWith(u8, href, "https://")) and !containsString(urls.items, href)) {
+                try urls.append(gpa, try gpa.dupe(u8, href));
+            }
+            search_pos = value_end + 1;
+        }
+    }
+}
+
+fn writeArchivePages(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usize {
+    var urls: std.ArrayList([]u8) = .empty;
+    defer freeStringList(gpa, &urls);
+    try collectExternalLinks(io, gpa, &urls);
+
+    var written: usize = 0;
+    const index = try renderArchiveIndex(gpa, urls.items, style_version);
+    defer gpa.free(index);
+    try Io.Dir.cwd().writeFile(io, .{ .sub_path = archive_index_path, .data = index });
+    written += 1;
+
+    for (urls.items) |url| {
+        const path = try archiveFilePath(gpa, url);
+        defer gpa.free(path);
+        const page = try renderArchivePage(gpa, url, style_version);
+        defer gpa.free(page);
+        try Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = page });
+        written += 1;
+    }
+    return written;
+}
+
+fn renderArchiveIndex(gpa: std.mem.Allocator, urls: []const []const u8, style_version: [16]u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    try appendGeneratedPageHead(gpa, &out, "External link archive registry", "Local metadata records for external links referenced by plosca.ru.", style_version);
+    try out.appendSlice(gpa, "<main id=\"main\"><article><h1>External link archive registry</h1>\n");
+    try out.appendSlice(gpa, "<p>This is a metadata registry, not a copy of third-party pages.</p>\n<ul>\n");
+    for (urls) |url| {
+        const path = try archivePath(gpa, url);
+        defer gpa.free(path);
+        try out.appendSlice(gpa, "<li><a href=\"");
+        try appendHtmlEscaped(gpa, &out, path);
+        try out.appendSlice(gpa, "\">");
+        try appendHtmlEscaped(gpa, &out, url);
+        try out.appendSlice(gpa, "</a></li>\n");
+    }
+    try out.appendSlice(gpa, "</ul></article></main></body></html>\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn renderArchivePage(gpa: std.mem.Allocator, url: []const u8, style_version: [16]u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    try appendGeneratedPageHead(gpa, &out, "Archive record", "Local metadata record for an external link referenced by plosca.ru.", style_version);
+    try out.appendSlice(gpa, "<main id=\"main\"><article><h1>Archive record</h1>\n");
+    try out.appendSlice(gpa, "<p>This page records an external link target so old references remain understandable. It does not store or republish the third-party page.</p>\n");
+    try out.appendSlice(gpa, "<dl><dt>URL</dt><dd><a href=\"");
+    try appendHtmlEscaped(gpa, &out, url);
+    try out.appendSlice(gpa, "\">");
+    try appendHtmlEscaped(gpa, &out, url);
+    try out.appendSlice(gpa, "</a></dd></dl>\n");
+    try out.appendSlice(gpa, "<p><a href=\"/archive\">Back to archive registry</a></p></article></main></body></html>\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn appendGeneratedPageHead(gpa: std.mem.Allocator, out: *std.ArrayList(u8), title: []const u8, description: []const u8, style_version: [16]u8) !void {
+    try out.appendSlice(gpa, "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\" />\n");
+    try out.appendSlice(gpa, "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n<title>");
+    try appendHtmlEscaped(gpa, out, title);
+    try out.appendSlice(gpa, "</title>\n<meta name=\"description\" content=\"");
+    try appendHtmlEscaped(gpa, out, description);
+    try out.print(gpa, "\" />\n<meta name=\"theme-color\" content=\"#ffffff\" />\n<script src=\"/theme.js\"></script>\n<link rel=\"stylesheet\" href=\"/style.css?v={s}\" />\n</head><body><span id=\"top\" aria-hidden=\"true\"></span>\n", .{style_version[0..]});
+}
+
+fn writeTextAlternates(io: Io, gpa: std.mem.Allocator) !usize {
+    var written: usize = 0;
+    for (pages) |page| {
+        if (page.kind != .article and page.kind != .prose) continue;
+        const html = try readStaticFile(io, gpa, page.file);
+        defer gpa.free(html);
+        const markdown = try renderTextAlternate(gpa, page, html, true);
+        defer gpa.free(markdown);
+        const text = try renderTextAlternate(gpa, page, html, false);
+        defer gpa.free(text);
+
+        const markdown_path = try std.fmt.allocPrint(gpa, "static/{s}.md", .{page.slug});
+        defer gpa.free(markdown_path);
+        const text_path = try std.fmt.allocPrint(gpa, "static/{s}.txt", .{page.slug});
+        defer gpa.free(text_path);
+        try Io.Dir.cwd().writeFile(io, .{ .sub_path = markdown_path, .data = markdown });
+        try Io.Dir.cwd().writeFile(io, .{ .sub_path = text_path, .data = text });
+        written += 2;
+    }
+    return written;
+}
+
+fn renderTextAlternate(gpa: std.mem.Allocator, page: PageMeta, html: []const u8, markdown: bool) ![]u8 {
+    const article = extractElement(html, "article") orelse html;
+    const plain = try htmlText(gpa, article);
+    defer gpa.free(plain);
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    if (markdown) {
+        try out.appendSlice(gpa, "# ");
+        try out.appendSlice(gpa, page.title);
+        try out.appendSlice(gpa, "\n\n");
+    } else {
+        try out.appendSlice(gpa, page.title);
+        try out.appendSlice(gpa, "\n");
+        try out.appendNTimes(gpa, '=', page.title.len);
+        try out.appendSlice(gpa, "\n\n");
+    }
+    if (page.date) |date| {
+        try out.print(gpa, "Date: {s}\n\n", .{date});
+    }
+    try out.print(gpa, "Canonical: https://plosca.ru{s}\n\n", .{page.route});
+    try out.appendSlice(gpa, page.description);
+    try out.appendSlice(gpa, "\n\n---\n\n");
+    try out.appendSlice(gpa, std.mem.trim(u8, plain, " \t\r\n"));
+    try out.appendSlice(gpa, "\n");
+    return try out.toOwnedSlice(gpa);
+}
+
+fn htmlText(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var i: usize = 0;
+    var last_space = true;
+    while (i < html.len) {
+        if (std.mem.startsWith(u8, html[i..], "<nav")) {
+            if (std.mem.indexOfPos(u8, html, i, "</nav>")) |end| {
+                i = end + "</nav>".len;
+                continue;
+            }
+        }
+        if (std.mem.startsWith(u8, html[i..], "<a")) {
+            if (std.mem.indexOfPos(u8, html, i, "heading-anchor")) |anchor_marker| {
+                const tag_end = std.mem.indexOfScalarPos(u8, html, i, '>') orelse break;
+                if (anchor_marker < tag_end) {
+                    if (findClosingTag(html, tag_end, "a")) |close| {
+                        i = close.end;
+                        continue;
+                    }
+                }
+            }
+            if (std.mem.indexOfPos(u8, html, i, "up-btn")) |up_marker| {
+                const tag_end = std.mem.indexOfScalarPos(u8, html, i, '>') orelse break;
+                if (up_marker < tag_end) {
+                    if (findClosingTag(html, tag_end, "a")) |close| {
+                        i = close.end;
+                        continue;
+                    }
+                }
+            }
+        }
+        if (html[i] == '<') {
+            if (std.mem.indexOfScalarPos(u8, html, i, '>')) |end| {
+                if (!last_space) {
+                    try out.append(gpa, '\n');
+                    last_space = true;
+                }
+                i = end + 1;
+                continue;
+            }
+        }
+        if (html[i] == '&') {
+            if (try appendDecodedEntity(gpa, &out, html[i..])) |consumed| {
+                i += consumed;
+                last_space = false;
+                continue;
+            }
+        }
+        if (std.ascii.isWhitespace(html[i])) {
+            if (!last_space) {
+                try out.append(gpa, ' ');
+                last_space = true;
+            }
+        } else {
+            try out.append(gpa, html[i]);
+            last_space = false;
+        }
+        i += 1;
+    }
+    return try out.toOwnedSlice(gpa);
+}
+
+const ClosingTag = struct {
+    start: usize,
+    end: usize,
+};
+
+fn findClosingTag(html: []const u8, start: usize, tag_name: []const u8) ?ClosingTag {
+    const needle = std.fmt.allocPrint(std.heap.page_allocator, "</{s}", .{tag_name}) catch return null;
+    defer std.heap.page_allocator.free(needle);
+
+    var search_pos = start;
+    while (std.mem.indexOfPos(u8, html, search_pos, needle)) |close_start| {
+        const after_name = close_start + needle.len;
+        if (after_name >= html.len) return null;
+        if (html[after_name] != '>' and !std.ascii.isWhitespace(html[after_name])) {
+            search_pos = after_name;
+            continue;
+        }
+        const close_end = std.mem.indexOfScalarPos(u8, html, after_name, '>') orelse return null;
+        return .{ .start = close_start, .end = close_end + 1 };
+    }
+    return null;
+}
+
+fn appendDecodedEntity(gpa: std.mem.Allocator, out: *std.ArrayList(u8), text: []const u8) !?usize {
+    const entities = [_]struct { encoded: []const u8, decoded: []const u8 }{
+        .{ .encoded = "&amp;", .decoded = "&" },
+        .{ .encoded = "&lt;", .decoded = "<" },
+        .{ .encoded = "&gt;", .decoded = ">" },
+        .{ .encoded = "&quot;", .decoded = "\"" },
+        .{ .encoded = "&#39;", .decoded = "'" },
+        .{ .encoded = "&nbsp;", .decoded = " " },
+    };
+    for (entities) |entity| {
+        if (std.mem.startsWith(u8, text, entity.encoded)) {
+            try out.appendSlice(gpa, entity.decoded);
+            return entity.encoded.len;
+        }
+    }
+    return null;
+}
+
+fn archivePath(gpa: std.mem.Allocator, url: []const u8) ![]u8 {
+    const digest = shortHash(url);
+    return try std.fmt.allocPrint(gpa, "/archive/{s}.html", .{digest[0..]});
+}
+
+fn archiveFilePath(gpa: std.mem.Allocator, url: []const u8) ![]u8 {
+    const digest = shortHash(url);
+    return try std.fmt.allocPrint(gpa, "static/archive/{s}.html", .{digest[0..]});
+}
+
+fn shortHash(value: []const u8) [16]u8 {
+    var hash = std.crypto.hash.sha2.Sha256.init(.{});
+    hash.update(value);
+    var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
+    hash.final(&digest);
+
+    const hex = "0123456789abcdef";
+    var out: [16]u8 = undefined;
+    for (digest[0..8], 0..) |byte, index| {
+        out[index * 2] = hex[byte >> 4];
+        out[index * 2 + 1] = hex[byte & 0x0f];
+    }
+    return out;
+}
+
+fn containsString(values: []const []const u8, needle: []const u8) bool {
+    for (values) |value| {
+        if (std.mem.eql(u8, value, needle)) return true;
+    }
+    return false;
+}
+
+fn freeStringList(gpa: std.mem.Allocator, list: *std.ArrayList([]u8)) void {
+    for (list.items) |item| gpa.free(item);
+    list.deinit(gpa);
 }
 
 fn syncHtmlEnhancements(io: Io, gpa: std.mem.Allocator) !usize {
@@ -704,14 +1439,14 @@ fn auditAnchorText(page: PageMeta, html: []const u8) usize {
             continue;
         }
         const tag_end = std.mem.indexOfScalarPos(u8, html, anchor_start, '>') orelse break;
-        const close = std.mem.indexOfPos(u8, html, tag_end + 1, "</a>") orelse break;
+        const close = findClosingTag(html, tag_end + 1, "a") orelse break;
         const tag = html[anchor_start..tag_end];
-        const inner = html[tag_end + 1 .. close];
+        const inner = html[tag_end + 1 .. close.start];
         if (!anchorHasReadableContent(inner) and !std.mem.containsAtLeast(u8, tag, 1, "href=\"#cb")) {
             std.debug.print("static/{s}: anchor has no readable text near byte {d}\n", .{ page.file, anchor_start });
             failures += 1;
         }
-        search_pos = close + "</a>".len;
+        search_pos = close.end;
     }
     return failures;
 }
@@ -940,6 +1675,11 @@ fn staticExists(io: Io, gpa: std.mem.Allocator, rel: []const u8) !bool {
     const path = try std.fmt.allocPrint(gpa, "static/{s}", .{rel});
     defer gpa.free(path);
 
+    return try fileExists(io, gpa, path);
+}
+
+fn fileExists(io: Io, gpa: std.mem.Allocator, path: []const u8) !bool {
+    _ = gpa;
     var file = Io.Dir.cwd().openFile(io, path, .{ .allow_directory = false }) catch |err| switch (err) {
         error.FileNotFound => return false,
         else => |e| return e,
