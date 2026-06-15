@@ -28,11 +28,11 @@
         <meta name="msapplication-TileColor" content="#d64937" />
         <meta name="theme-color" content="#ffffff" />
 
-    <link rel="preload" href="/style.css?v=626a29796273e314" as="style" />
+    <link rel="preload" href="/style.css?v=47d2428be2a16970" as="style" />
     <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
     <script src="/theme.js"></script>
-    <link rel="stylesheet" href="/style.css?v=626a29796273e314" />
+    <link rel="stylesheet" href="/style.css?v=47d2428be2a16970" />
     </head>
     <body>
         <span id="top" aria-hidden="true"></span>
@@ -84,9 +84,18 @@
 
         <main id="main">
             <div class="home-box error-box">
-                <h1><span>404</span> Page not found</h1>
-                <p>The page you asked for is not here.</p>
-                <p><a class="btn-outline" href="/">Return home</a></p>
+                <p class="error-kicker">404</p>
+                <h1>Page not found</h1>
+                <p>
+                    That route does not point at a published page. These are
+                    the useful places to recover from.
+                </p>
+                <nav class="error-links" aria-label="Recovery links">
+                    <a class="btn-primary" href="/">Home</a>
+                    <a class="btn-secondary" href="/about">About</a>
+                    <a class="btn-secondary" href="/hello_world">Hello World</a>
+                    <a class="btn-secondary" href="/prose">Prose</a>
+                </nav>
             </div>
         </main>
 

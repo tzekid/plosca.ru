@@ -135,10 +135,11 @@ fn writeSite(io: Io, gpa: std.mem.Allocator) !void {
 
     try cwd.writeFile(io, .{ .sub_path = generated_css_path, .data = css });
     try writeGeneratedMetadata(io, gpa);
+    const enhanced = try syncHtmlEnhancements(io, gpa);
 
     const version = styleVersion(css);
     const updated = try syncHtmlStyleRefs(io, gpa, version, true);
-    std.debug.print("style.css version {s}; updated {d} HTML file(s); generated page metadata\n", .{ version[0..], updated });
+    std.debug.print("style.css version {s}; updated {d} stylesheet ref(s), enhanced {d} HTML file(s), generated page metadata\n", .{ version[0..], updated, enhanced });
 }
 
 fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
@@ -305,6 +306,95 @@ fn appendJsonString(gpa: std.mem.Allocator, out: *std.ArrayList(u8), value: []co
     try out.append(gpa, '"');
 }
 
+fn syncHtmlEnhancements(io: Io, gpa: std.mem.Allocator) !usize {
+    var static_dir = try Io.Dir.cwd().openDir(io, static_dir_path, .{ .iterate = true });
+    defer static_dir.close(io);
+
+    var updated: usize = 0;
+    var it = static_dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".html")) continue;
+
+        const html = try static_dir.readFileAlloc(io, entry.name, gpa, .limited(max_file_size));
+        defer gpa.free(html);
+
+        const with_toc_labels = try rewriteTocLabels(gpa, html);
+        defer gpa.free(with_toc_labels);
+        const enhanced = try rewriteHeadingAnchors(gpa, with_toc_labels);
+        defer gpa.free(enhanced);
+
+        if (!std.mem.eql(u8, html, enhanced)) {
+            try static_dir.writeFile(io, .{ .sub_path = entry.name, .data = enhanced });
+            updated += 1;
+        }
+    }
+
+    return updated;
+}
+
+fn rewriteTocLabels(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    const old = "<nav id=\"TOC\" role=\"doc-toc\">";
+    const new = "<nav id=\"TOC\" role=\"doc-toc\" aria-label=\"Contents\">";
+    if (std.mem.indexOf(u8, html, new) != null) return try gpa.dupe(u8, html);
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var cursor: usize = 0;
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, old)) |match_pos| {
+        try out.appendSlice(gpa, html[cursor..match_pos]);
+        try out.appendSlice(gpa, new);
+        cursor = match_pos + old.len;
+        search_pos = cursor;
+    }
+    try out.appendSlice(gpa, html[cursor..]);
+    return try out.toOwnedSlice(gpa);
+}
+
+fn rewriteHeadingAnchors(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+
+    var cursor: usize = 0;
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<h")) |heading_start| {
+        if (heading_start + 3 >= html.len) break;
+        const level = html[heading_start + 2];
+        if ((level != '2' and level != '3') or !std.ascii.isWhitespace(html[heading_start + 3])) {
+            search_pos = heading_start + 2;
+            continue;
+        }
+
+        const tag_end = std.mem.indexOfScalarPos(u8, html, heading_start, '>') orelse break;
+        const close_tag = if (level == '2') "</h2>" else "</h3>";
+        const close_start = std.mem.indexOfPos(u8, html, tag_end + 1, close_tag) orelse break;
+        const close_end = close_start + close_tag.len;
+        const heading = html[heading_start..close_end];
+        const tag = html[heading_start..tag_end];
+        const id = attributeValue(tag, "id") orelse {
+            search_pos = close_end;
+            continue;
+        };
+        if (std.mem.indexOf(u8, heading, "heading-anchor") != null) {
+            search_pos = close_end;
+            continue;
+        }
+
+        try out.appendSlice(gpa, html[cursor..close_start]);
+        try out.print(
+            gpa,
+            "<a class=\"heading-anchor\" href=\"#{s}\" aria-label=\"Link to this section\">&lt;{{ # }}&gt;</a>",
+            .{id},
+        );
+        cursor = close_start;
+        search_pos = close_end;
+    }
+
+    try out.appendSlice(gpa, html[cursor..]);
+    return try out.toOwnedSlice(gpa);
+}
+
 fn syncHtmlStyleRefs(io: Io, gpa: std.mem.Allocator, version: [16]u8, write: bool) !usize {
     var static_dir = try Io.Dir.cwd().openDir(io, static_dir_path, .{ .iterate = true });
     defer static_dir.close(io);
@@ -430,6 +520,7 @@ fn auditContent(io: Io, gpa: std.mem.Allocator) !usize {
 
         failures += auditPageMetadata(page, html);
         failures += try auditPageIdsAndFragments(gpa, page, html);
+        failures += auditHeadingAnchors(page, html);
         failures += auditAnchorText(page, html);
     }
     return failures;
@@ -575,6 +666,33 @@ fn idExists(ids: []const []const u8, id: []const u8) bool {
         if (std.mem.eql(u8, candidate, id)) return true;
     }
     return false;
+}
+
+fn auditHeadingAnchors(page: PageMeta, html: []const u8) usize {
+    if (page.kind != .article and page.kind != .prose) return 0;
+
+    var failures: usize = 0;
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<h")) |heading_start| {
+        if (heading_start + 3 >= html.len) break;
+        const level = html[heading_start + 2];
+        if ((level != '2' and level != '3') or !std.ascii.isWhitespace(html[heading_start + 3])) {
+            search_pos = heading_start + 2;
+            continue;
+        }
+
+        const tag_end = std.mem.indexOfScalarPos(u8, html, heading_start, '>') orelse break;
+        const close_tag = if (level == '2') "</h2>" else "</h3>";
+        const close_start = std.mem.indexOfPos(u8, html, tag_end + 1, close_tag) orelse break;
+        const close_end = close_start + close_tag.len;
+        const tag = html[heading_start..tag_end];
+        if (attributeValue(tag, "id") != null and std.mem.indexOf(u8, html[heading_start..close_end], "heading-anchor") == null) {
+            std.debug.print("static/{s}: h{c} near byte {d} is missing a heading self-link\n", .{ page.file, level, heading_start });
+            failures += 1;
+        }
+        search_pos = close_end;
+    }
+    return failures;
 }
 
 fn auditAnchorText(page: PageMeta, html: []const u8) usize {

@@ -18,15 +18,15 @@ Scope note: large Gwern.net features are implemented in a `plosca.ru`-scaled for
 | --- | --- | --- | --- | --- | --- |
 | Article metadata manifest | quick win | completed | Added a Zig-owned page manifest and generated `static/metadata/pages.json` with routes, files, titles, descriptions, dates, tags, and related links. | `zig build css`, `zig build check-site`, generated output diff | ready for slice commit/publish |
 | Content quality checks | quick win | completed | Extended `zig build check-site` with manifest sync checks, title validation, meta description validation, duplicate/empty ID checks, local fragment checks, manifest route checks, and empty-anchor checks that ignore commented markup and Pandoc code line anchors. | `zig build check-site`, `zig build test`, `zig build -Doptimize=ReleaseFast`, `./scripts/smoke.sh` | ready for slice commit/publish |
-| Heading self-links | quick win | pending | Add accessible heading permalink affordances without requiring JS. | screenshot/smoke, `zig build check-site` | pending |
-| Better 404 recovery | quick win | pending | Improve 404 with route recovery links and page-specific copy. | local and deployed missing-route smoke | pending |
-| Article related links | quick win | pending | Add small related/connection blocks to article pages. | `zig build check-site`, visual smoke | pending |
-| Keep theme simple | quick win | pending | Preserve current session-lifetime theme implementation and document it as intentionally not Gwern-toolbar-style. | `zig build check-site`, theme smoke | pending |
+| Heading self-links | quick win | completed | Added `site-tool write` HTML enhancement for h2/h3 permalink anchors plus checker enforcement for article/prose pages. | `zig build css`, `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
+| Better 404 recovery | quick win | completed | Reworked `404.html` with clearer recovery copy and visible links to home, about, article, and prose. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
+| Article related links | quick win | completed | Added quiet related-link sections to `/hello_world` and `/prose`, styled in the editorial system. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
+| Keep theme simple | quick win | completed | Left the existing session-lifetime `/theme.js` model in place and intentionally avoided a Gwern-style toolbar or persistent localStorage setting. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Generated backlinks | medium | pending | Generate local backlink snippets from static HTML links. | generated snippet checks | pending |
-| CSS-only sidenotes | medium | pending | Add footnote/sidenote styles that degrade to normal footnotes. | visual smoke in article pages | pending |
-| Native collapses | medium | pending | Add styled `<details>` support for future appendices/code output. | visual smoke and keyboard behavior | pending |
+| CSS-only sidenotes | medium | completed | Added `.footnotes`, `.sidenote`, and `.margin-note` styling that stays inline on small screens and can float into the right margin on wide article layouts. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
+| Native collapses | medium | completed | Added native `details`/`summary` article styling with keyboard-visible focus and no custom state code. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Markdown/text alternates | medium | pending | Generate or serve text/Markdown alternates for article pages. | curl alternate files and check-site references | pending |
-| Link-type markers | medium | pending | Add unobtrusive external/PDF/archive markers. | visual smoke and contrast check | pending |
+| Link-type markers | medium | completed | Added CSS-only external and PDF markers scoped to article content, excluding TOC, heading anchors, related blocks, and button-style links. | `zig build check-site`, `./scripts/smoke.sh` | ready for slice commit/publish |
 | Annotation DB and previews | large | pending | Generate a small annotation database and first-party hover/focus previews. | JS/no-JS smoke, asset check | pending |
 | Client-side transclusion | large | pending | Add a minimal fragment transclusion utility with no required dependency. | transclusion fragment smoke | pending |
 | Similar-link generation | large | pending | Generate similar links from metadata/body terms. | deterministic generated output check | pending |
