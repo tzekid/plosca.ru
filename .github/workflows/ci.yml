@@ -12,11 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - run: sudo apt-get update && sudo apt-get install -y brotli
       - uses: mlugg/setup-zig@v2.2.1
         with:
           version: 0.16.0
       - run: zig build css
-      - run: git diff --exit-code static/style.css static/*.html
+      - run: git diff --exit-code static
       - run: zig build check-site
       - run: zig fmt --check build.zig src/main.zig src/tools/site.zig
       - run: zig build test

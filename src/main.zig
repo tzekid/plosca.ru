@@ -490,6 +490,7 @@ fn cacheControlFor(path: []const u8) []const u8 {
     if (std.ascii.eqlIgnoreCase(ext, ".md")) return cache_html;
     if (std.ascii.eqlIgnoreCase(ext, ".txt")) return cache_html;
     if (std.ascii.eqlIgnoreCase(ext, ".css")) return cache_immutable;
+    if (std.ascii.eqlIgnoreCase(ext, ".js")) return cache_immutable;
     if (std.ascii.eqlIgnoreCase(ext, ".webmanifest")) return cache_immutable;
     if (std.ascii.eqlIgnoreCase(ext, ".pdf")) return cache_immutable;
     if (std.ascii.eqlIgnoreCase(ext, ".png")) return cache_immutable;
@@ -700,6 +701,7 @@ test "content type and cache policy mapping" {
     try std.testing.expectEqualStrings("application/octet-stream", contentTypeFor("file.bin"));
     try std.testing.expectEqualStrings(cache_html, cacheControlFor("index.html"));
     try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("style.css"));
+    try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("site-features.js"));
     try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("resume.pdf"));
 }
 

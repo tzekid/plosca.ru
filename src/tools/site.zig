@@ -33,6 +33,7 @@ const link_title_limit = 140;
 const curl_user_agent = "plosca.ru-link-enricher/1.0 (+https://plosca.ru/about)";
 
 const CheckError = error{SiteCheckFailed};
+const CompressionError = error{CompressionFailed};
 const PdfPreviewError = error{PdfPreviewFailed};
 
 const AssetVersions = struct {
@@ -147,6 +148,9 @@ pub fn main(init: std.process.Init) !void {
         try enrichLinks(init.io, init.gpa);
     } else if (std.mem.eql(u8, args[1], "pdf-previews")) {
         try writePdfPreviews(init.io, init.gpa);
+    } else if (std.mem.eql(u8, args[1], "compress-assets")) {
+        const compressed = try writeCompressedAssets(init.io, init.gpa);
+        std.debug.print("compressed {d} static asset(s)\n", .{compressed});
     } else {
         usageAndExit();
     }
@@ -159,6 +163,7 @@ fn usageAndExit() noreturn {
         \\  site-tool check
         \\  site-tool enrich-links
         \\  site-tool pdf-previews
+        \\  site-tool compress-assets
         \\
     , .{});
     std.process.exit(2);
@@ -176,9 +181,10 @@ fn writeSite(io: Io, gpa: std.mem.Allocator) !void {
     const versions = try readAssetVersions(io, gpa, css);
     const updated = try syncHtmlAssetRefs(io, gpa, versions, true);
     const artifacts = try writeGeneratedArtifacts(io, gpa, versions);
+    const compressed = try writeCompressedAssets(io, gpa);
     std.debug.print(
-        "asset versions style={s} theme={s} site-features={s}; updated {d} asset ref(s), enhanced {d} HTML file(s), generated {d} metadata artifact(s)\n",
-        .{ versions.style[0..], versions.theme[0..], versions.site_features[0..], updated, enhanced, artifacts },
+        "asset versions style={s} theme={s} site-features={s}; updated {d} asset ref(s), enhanced {d} HTML file(s), generated {d} metadata artifact(s), compressed {d} asset(s)\n",
+        .{ versions.style[0..], versions.theme[0..], versions.site_features[0..], updated, enhanced, artifacts, compressed },
     );
 }
 
@@ -204,6 +210,7 @@ fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
     failures += try checkGeneratedArtifacts(io, gpa);
     failures += try auditReferences(io, gpa, generated_css);
     failures += try auditContent(io, gpa);
+    failures += try checkCompressedAssets(io, gpa);
 
     if (failures != 0) return CheckError.SiteCheckFailed;
     std.debug.print("site check passed; asset versions style={s} theme={s} site-features={s}\n", .{ versions.style[0..], versions.theme[0..], versions.site_features[0..] });
@@ -236,6 +243,193 @@ fn assetVersion(contents: []const u8) [16]u8 {
         out[index * 2 + 1] = hex[byte & 0x0f];
     }
     return out;
+}
+
+fn writeCompressedAssets(io: Io, gpa: std.mem.Allocator) !usize {
+    try deleteCompressedAssetsInDir(io, gpa, static_dir_path);
+    return try compressAssetsInDir(io, gpa, static_dir_path);
+}
+
+fn deleteCompressedAssetsInDir(io: Io, gpa: std.mem.Allocator, dir_path: []const u8) !void {
+    var dir = try Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true });
+    defer dir.close(io);
+
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        switch (entry.kind) {
+            .directory => {
+                const child = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ dir_path, entry.name });
+                defer gpa.free(child);
+                try deleteCompressedAssetsInDir(io, gpa, child);
+            },
+            .file => {
+                if (isCompressedAssetName(entry.name)) {
+                    try dir.deleteFile(io, entry.name);
+                }
+            },
+            else => {},
+        }
+    }
+}
+
+fn compressAssetsInDir(io: Io, gpa: std.mem.Allocator, dir_path: []const u8) !usize {
+    var dir = try Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true });
+    defer dir.close(io);
+
+    var count: usize = 0;
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        const path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ dir_path, entry.name });
+        defer gpa.free(path);
+
+        switch (entry.kind) {
+            .directory => count += try compressAssetsInDir(io, gpa, path),
+            .file => {
+                if (!isCompressibleAssetName(entry.name)) continue;
+                try writeCompressedVariant(io, gpa, path, .br);
+                try writeCompressedVariant(io, gpa, path, .gzip);
+                count += 1;
+            },
+            else => {},
+        }
+    }
+    return count;
+}
+
+const CompressionKind = enum {
+    br,
+    gzip,
+
+    fn suffix(self: CompressionKind) []const u8 {
+        return switch (self) {
+            .br => ".br",
+            .gzip => ".gz",
+        };
+    }
+};
+
+fn writeCompressedVariant(io: Io, gpa: std.mem.Allocator, path: []const u8, kind: CompressionKind) !void {
+    const data = try compressedAssetData(io, gpa, path, kind);
+    defer gpa.free(data);
+
+    const out_path = try std.fmt.allocPrint(gpa, "{s}{s}", .{ path, kind.suffix() });
+    defer gpa.free(out_path);
+    try Io.Dir.cwd().writeFile(io, .{ .sub_path = out_path, .data = data });
+}
+
+fn compressedAssetData(io: Io, gpa: std.mem.Allocator, path: []const u8, kind: CompressionKind) ![]u8 {
+    const argv = switch (kind) {
+        .br => [_][]const u8{ "brotli", "-q", "11", "-c", path },
+        .gzip => [_][]const u8{ "gzip", "-9", "-n", "-c", path },
+    };
+    const result = std.process.run(gpa, io, .{
+        .argv = &argv,
+        .expand_arg0 = .expand,
+        .stdout_limit = .limited(max_file_size),
+        .stderr_limit = .limited(64 * 1024),
+    }) catch |err| {
+        if (err == error.FileNotFound) {
+            std.debug.print("{s} is required for compressed static assets\n", .{argv[0]});
+        }
+        return err;
+    };
+    errdefer gpa.free(result.stdout);
+    defer gpa.free(result.stderr);
+
+    const ok = switch (result.term) {
+        .exited => |code| code == 0,
+        else => false,
+    };
+    if (!ok) {
+        std.debug.print("{s} failed while compressing {s}:\n{s}\n", .{ argv[0], path, result.stderr });
+        return CompressionError.CompressionFailed;
+    }
+    return result.stdout;
+}
+
+fn checkCompressedAssets(io: Io, gpa: std.mem.Allocator) !usize {
+    return try checkCompressedAssetsInDir(io, gpa, static_dir_path);
+}
+
+fn checkCompressedAssetsInDir(io: Io, gpa: std.mem.Allocator, dir_path: []const u8) !usize {
+    var dir = try Io.Dir.cwd().openDir(io, dir_path, .{ .iterate = true });
+    defer dir.close(io);
+
+    var failures: usize = 0;
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        const path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ dir_path, entry.name });
+        defer gpa.free(path);
+
+        switch (entry.kind) {
+            .directory => failures += try checkCompressedAssetsInDir(io, gpa, path),
+            .file => {
+                if (isCompressedAssetName(entry.name)) {
+                    failures += try checkCompressedAssetIsNotStale(io, gpa, dir_path, entry.name);
+                    continue;
+                }
+                if (!isCompressibleAssetName(entry.name)) continue;
+                failures += try checkCompressedVariant(io, gpa, path, .br);
+                failures += try checkCompressedVariant(io, gpa, path, .gzip);
+            },
+            else => {},
+        }
+    }
+    return failures;
+}
+
+fn checkCompressedAssetIsNotStale(io: Io, gpa: std.mem.Allocator, dir_path: []const u8, name: []const u8) !usize {
+    const suffix_len = if (std.mem.endsWith(u8, name, ".br"))
+        ".br".len
+    else if (std.mem.endsWith(u8, name, ".gz"))
+        ".gz".len
+    else
+        return 0;
+    const source_name = name[0 .. name.len - suffix_len];
+    if (!isCompressibleAssetName(source_name)) {
+        std.debug.print("{s}/{s} is stale; run `zig build css`\n", .{ dir_path, name });
+        return 1;
+    }
+
+    const source_path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ dir_path, source_name });
+    defer gpa.free(source_path);
+    if (try fileExists(io, gpa, source_path)) return 0;
+
+    std.debug.print("{s}/{s} is stale; run `zig build css`\n", .{ dir_path, name });
+    return 1;
+}
+
+fn checkCompressedVariant(io: Io, gpa: std.mem.Allocator, path: []const u8, kind: CompressionKind) !usize {
+    const expected = try compressedAssetData(io, gpa, path, kind);
+    defer gpa.free(expected);
+
+    const compressed_path = try std.fmt.allocPrint(gpa, "{s}{s}", .{ path, kind.suffix() });
+    defer gpa.free(compressed_path);
+
+    const actual = Io.Dir.cwd().readFileAlloc(io, compressed_path, gpa, .limited(max_file_size)) catch |err| switch (err) {
+        error.FileNotFound => {
+            std.debug.print("{s} is missing; run `zig build css`\n", .{compressed_path});
+            return 1;
+        },
+        else => |e| return e,
+    };
+    defer gpa.free(actual);
+
+    if (std.mem.eql(u8, expected, actual)) return 0;
+    std.debug.print("{s} is not synchronized with {s}; run `zig build css`\n", .{ compressed_path, path });
+    return 1;
+}
+
+fn isCompressedAssetName(name: []const u8) bool {
+    return std.mem.endsWith(u8, name, ".br") or std.mem.endsWith(u8, name, ".gz");
+}
+
+fn isCompressibleAssetName(name: []const u8) bool {
+    const extensions = [_][]const u8{ ".html", ".css", ".js", ".json", ".webmanifest", ".xml", ".txt", ".md" };
+    for (extensions) |extension| {
+        if (std.mem.endsWith(u8, name, extension)) return true;
+    }
+    return false;
 }
 
 const PdfPreviewInfo = struct {

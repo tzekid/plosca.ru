@@ -71,6 +71,12 @@ The frontend remains static HTML with no Node, npm, CSS framework, or browser-te
 zig build css
 ```
 
+`zig build css` also regenerates committed `.br` and `.gz` siblings for text static assets so the Zig server can serve precompressed responses. To refresh only compressed siblings after manual static-file edits:
+
+```sh
+zig build compress-assets
+```
+
 Check that generated CSS, stylesheet cache-busters, and local asset references are synchronized:
 
 ```sh

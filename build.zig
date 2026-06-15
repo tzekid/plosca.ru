@@ -65,4 +65,9 @@ pub fn build(b: *std.Build) void {
     pdf_previews_cmd.addArg("pdf-previews");
     const pdf_previews_step = b.step("pdf-previews", "Render committed PDF preview images with pdftoppm");
     pdf_previews_step.dependOn(&pdf_previews_cmd.step);
+
+    const compress_assets_cmd = b.addRunArtifact(site_tool);
+    compress_assets_cmd.addArg("compress-assets");
+    const compress_assets_step = b.step("compress-assets", "Generate committed .br/.gz siblings for text static assets");
+    compress_assets_step.dependOn(&compress_assets_cmd.step);
 }
