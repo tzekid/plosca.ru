@@ -1137,6 +1137,13 @@
   .link-preview[hidden] {
     display: none;
   }
+  .link-preview--interactive {
+    max-height: min(14rem, calc(100vh - 2rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: var(--color-code-scrollbar) transparent;
+    scrollbar-width: thin;
+  }
   .link-preview strong,
   .link-preview span,
   .link-preview small {
