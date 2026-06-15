@@ -93,13 +93,13 @@
     const positionPreview = (anchor) => {
         const box = ensurePreview();
         const rect = anchor.getBoundingClientRect();
-        const margin = 14;
-        const width = Math.min(activeInteractive ? 540 : 390, window.innerWidth - margin * 2);
-        box.style.maxWidth = `${width}px`;
+        const margin = 16;
+        const width = Math.min(activeInteractive ? 560 : 420, window.innerWidth - margin * 2);
+        box.style.width = `${width}px`;
 
         const previewRect = box.getBoundingClientRect();
         const left = Math.min(
-            Math.max(margin, rect.left),
+            Math.max(margin, rect.left - (activeInteractive ? 28 : 0)),
             window.innerWidth - previewRect.width - margin,
         );
         const below = rect.bottom + margin;
@@ -134,9 +134,13 @@
             : "";
         const meta = [source, date, archive].filter(Boolean).join(" · ");
         box.innerHTML = `
-            <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
-            <span>${escapeHtml(annotation.summary || annotation.href)}</span>
-            <small>${meta}</small>
+            <div class="link-preview__header">
+                <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
+            </div>
+            <div class="link-preview__body">
+                <p>${escapeHtml(annotation.summary || annotation.href)}</p>
+            </div>
+            <small class="link-preview__meta">${meta}</small>
         `;
         box.hidden = false;
         positionPreview(anchor);
