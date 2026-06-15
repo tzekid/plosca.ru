@@ -77,6 +77,17 @@ Check that generated CSS, stylesheet cache-busters, and local asset references a
 zig build check-site
 ```
 
+### Link Context
+
+External-link popovers are generated from a committed build-time cache at `src/content/link_context.json`. Refresh it after adding or changing external links:
+
+```sh
+zig build enrich-links
+zig build css
+```
+
+The enrichment step uses `curl` and the network. Normal CSS generation, site checks, tests, and deployment stay offline and use the committed cache.
+
 ### Test
 
 ```sh

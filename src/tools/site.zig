@@ -4,6 +4,7 @@ const Io = std.Io;
 
 const source_css_path = "src/styles/site.css";
 const generated_css_path = "static/style.css";
+const link_context_path = "src/content/link_context.json";
 const static_dir_path = "static";
 const metadata_dir_path = "static/metadata";
 const pages_json_path = "static/metadata/pages.json";
@@ -16,6 +17,10 @@ const external_links_json_path = "static/metadata/external-links.json";
 const archive_dir_path = "static/archive";
 const archive_index_path = "static/archive/index.html";
 const max_file_size = 16 * 1024 * 1024;
+const max_fetch_size = 2 * 1024 * 1024;
+const link_summary_limit = 360;
+const link_title_limit = 140;
+const curl_user_agent = "plosca.ru-link-enricher/1.0 (+https://plosca.ru/about)";
 
 const CheckError = error{SiteCheckFailed};
 
@@ -121,6 +126,8 @@ pub fn main(init: std.process.Init) !void {
         try writeSite(init.io, init.gpa);
     } else if (std.mem.eql(u8, args[1], "check")) {
         try checkSite(init.io, init.gpa);
+    } else if (std.mem.eql(u8, args[1], "enrich-links")) {
+        try enrichLinks(init.io, init.gpa);
     } else {
         usageAndExit();
     }
@@ -131,6 +138,7 @@ fn usageAndExit() noreturn {
         \\Usage:
         \\  site-tool write
         \\  site-tool check
+        \\  site-tool enrich-links
         \\
     , .{});
     std.process.exit(2);
@@ -285,6 +293,14 @@ fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
         }
     }
 
+    const expected_annotations = try renderAnnotationsJson(io, gpa);
+    defer gpa.free(expected_annotations);
+    failures += try checkGeneratedFileContents(io, gpa, annotations_json_path, expected_annotations);
+
+    const expected_external_links = try renderExternalLinksJson(io, gpa);
+    defer gpa.free(expected_external_links);
+    failures += try checkGeneratedFileContents(io, gpa, external_links_json_path, expected_external_links);
+
     for (pages) |page| {
         if (page.kind == .error_page) continue;
         failures += try checkGeneratedPageArtifact(io, gpa, related_dir_path, page);
@@ -308,6 +324,19 @@ fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
         }
     }
     return failures;
+}
+
+fn checkGeneratedFileContents(io: Io, gpa: std.mem.Allocator, path: []const u8, expected: []const u8) !usize {
+    const actual = Io.Dir.cwd().readFileAlloc(io, path, gpa, .limited(max_file_size)) catch |err| switch (err) {
+        error.FileNotFound => return 0,
+        else => |e| return e,
+    };
+    defer gpa.free(actual);
+    if (!std.mem.eql(u8, expected, actual)) {
+        std.debug.print("{s} is not synchronized with generated site metadata; run `zig build css`\n", .{path});
+        return 1;
+    }
+    return 0;
 }
 
 fn checkGeneratedPageArtifact(io: Io, gpa: std.mem.Allocator, dir_path: []const u8, page: PageMeta) !usize {
@@ -630,6 +659,9 @@ fn appendHtmlEscaped(gpa: std.mem.Allocator, out: *std.ArrayList(u8), value: []c
 }
 
 fn renderAnnotationsJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
+    var link_context = try loadLinkContextCache(io, gpa);
+    defer if (link_context) |*parsed| parsed.deinit();
+
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
     var seen: std.ArrayList([]u8) = .empty;
@@ -642,7 +674,7 @@ fn renderAnnotationsJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
         const html = try readStaticFile(io, gpa, page.file);
         defer gpa.free(html);
         const main_html = extractElement(html, "main") orelse html;
-        try appendAnnotationsFromHtml(gpa, &out, &seen, page, main_html, &count);
+        try appendAnnotationsFromHtml(gpa, &out, &seen, page, main_html, &count, if (link_context) |*parsed| &parsed.value else null);
     }
     try out.appendSlice(gpa, "\n  ]\n}\n");
     return try out.toOwnedSlice(gpa);
@@ -678,6 +710,7 @@ fn appendAnnotationsFromHtml(
     page: PageMeta,
     html: []const u8,
     count: *usize,
+    link_context: ?*const std.json.Value,
 ) !void {
     var search_pos: usize = 0;
     while (std.mem.indexOfPos(u8, html, search_pos, "<a")) |anchor_start| {
@@ -714,7 +747,7 @@ fn appendAnnotationsFromHtml(
 
         try seen.append(gpa, try gpa.dupe(u8, href));
         if (count.* != 0) try out.appendSlice(gpa, ",\n");
-        try appendAnnotationObject(gpa, out, page, href, text);
+        try appendAnnotationObject(gpa, out, page, href, text, link_context);
         count.* += 1;
         search_pos = close.end;
     }
@@ -726,6 +759,7 @@ fn appendAnnotationObject(
     source_page: PageMeta,
     href: []const u8,
     text: []const u8,
+    link_context: ?*const std.json.Value,
 ) !void {
     const kind = linkKind(href);
     const trimmed_text = std.mem.trim(u8, text, " \t\r\n");
@@ -739,16 +773,101 @@ fn appendAnnotationObject(
         try appendJsonField(gpa, out, "title", target.title, true);
         try appendJsonField(gpa, out, "summary", target.description, false);
     } else if (std.mem.eql(u8, kind, "external")) {
-        const archive_path = try archivePath(gpa, href);
-        defer gpa.free(archive_path);
-        try appendJsonField(gpa, out, "title", trimmed_text, true);
-        try appendJsonField(gpa, out, "summary", "External link recorded by the static site generator.", true);
-        try appendJsonField(gpa, out, "archive", archive_path, false);
+        try appendExternalAnnotation(gpa, out, href, trimmed_text, link_context);
     } else {
         try appendJsonField(gpa, out, "title", trimmed_text, true);
         try appendJsonField(gpa, out, "summary", "Static asset or local route.", false);
     }
     try out.appendSlice(gpa, "    }");
+}
+
+fn appendExternalAnnotation(
+    gpa: std.mem.Allocator,
+    out: *std.ArrayList(u8),
+    href: []const u8,
+    fallback_title: []const u8,
+    link_context: ?*const std.json.Value,
+) !void {
+    const archive_path = try archivePath(gpa, href);
+    defer gpa.free(archive_path);
+
+    const context = if (link_context) |root| findLinkContext(root, href) else null;
+    const context_status = if (context) |value| jsonStringField(value.*, "status") else null;
+    const usable_context = if (context_status) |status|
+        std.mem.eql(u8, status, "ok") or std.mem.eql(u8, status, "manual")
+    else
+        false;
+    const title = if (usable_context and context != null)
+        firstNonEmpty(&.{ jsonStringField(context.?.*, "title"), @as(?[]const u8, fallback_title) })
+    else
+        fallback_title;
+    const summary = if (usable_context and context != null)
+        firstNonEmpty(&.{ jsonStringField(context.?.*, "summary"), null })
+    else
+        null;
+    const site_name = if (context) |value|
+        firstNonEmpty(&.{ jsonStringField(value.*, "site_name"), displayHost(href) })
+    else
+        displayHost(href);
+    const context_kind = if (context) |value| jsonStringField(value.*, "kind") else null;
+
+    try appendJsonField(gpa, out, "title", title orelse fallback_title, true);
+    if (summary) |value| {
+        try appendJsonField(gpa, out, "summary", value, true);
+    } else {
+        const fallback = try std.fmt.allocPrint(gpa, "External link to {s}.", .{site_name orelse "another site"});
+        defer gpa.free(fallback);
+        try appendJsonField(gpa, out, "summary", fallback, true);
+    }
+    if (site_name) |value| try appendJsonField(gpa, out, "site_name", value, true);
+    if (context_kind) |value| try appendJsonField(gpa, out, "context_kind", value, true);
+    if (context) |value| {
+        if (jsonStringField(value.*, "canonical_url")) |canonical| {
+            try appendJsonField(gpa, out, "canonical_url", canonical, true);
+        }
+    }
+    try appendJsonField(gpa, out, "archive", archive_path, false);
+}
+
+fn firstNonEmpty(values: []const ?[]const u8) ?[]const u8 {
+    for (values) |maybe_value| {
+        const value = maybe_value orelse continue;
+        if (std.mem.trim(u8, value, " \t\r\n").len != 0) return value;
+    }
+    return null;
+}
+
+fn loadLinkContextCache(io: Io, gpa: std.mem.Allocator) !?std.json.Parsed(std.json.Value) {
+    const data = Io.Dir.cwd().readFileAlloc(io, link_context_path, gpa, .limited(max_file_size)) catch |err| switch (err) {
+        error.FileNotFound => return null,
+        else => |e| return e,
+    };
+    defer gpa.free(data);
+    return try std.json.parseFromSlice(std.json.Value, gpa, data, .{});
+}
+
+fn findLinkContext(root: *const std.json.Value, url: []const u8) ?*const std.json.Value {
+    if (root.* != .object) return null;
+    const links = root.object.get("links") orelse return null;
+    if (links != .object) return null;
+    return links.object.getPtr(url);
+}
+
+fn jsonStringField(value: std.json.Value, field: []const u8) ?[]const u8 {
+    if (value != .object) return null;
+    const child = value.object.get(field) orelse return null;
+    if (child != .string) return null;
+    return child.string;
+}
+
+fn displayHost(url: []const u8) ?[]const u8 {
+    const scheme_end = std.mem.indexOf(u8, url, "://") orelse return null;
+    var host_start = scheme_end + "://".len;
+    if (std.mem.startsWith(u8, url[host_start..], "www.")) host_start += "www.".len;
+    var host_end = host_start;
+    while (host_end < url.len and url[host_end] != '/' and url[host_end] != '?' and url[host_end] != '#') : (host_end += 1) {}
+    if (host_end == host_start) return null;
+    return url[host_start..host_end];
 }
 
 fn linkKind(href: []const u8) []const u8 {
@@ -782,6 +901,615 @@ fn collectExternalLinks(io: Io, gpa: std.mem.Allocator, urls: *std.ArrayList([]u
             search_pos = value_end + 1;
         }
     }
+}
+
+const LinkContextData = struct {
+    status: []const u8,
+    kind: []const u8,
+    title: ?[]u8 = null,
+    summary: ?[]u8 = null,
+    site_name: ?[]u8 = null,
+    canonical_url: ?[]u8 = null,
+    source_url: ?[]u8 = null,
+    fetched_at: []u8,
+    err: ?[]u8 = null,
+
+    fn deinit(self: *LinkContextData, gpa: std.mem.Allocator) void {
+        if (self.title) |value| gpa.free(value);
+        if (self.summary) |value| gpa.free(value);
+        if (self.site_name) |value| gpa.free(value);
+        if (self.canonical_url) |value| gpa.free(value);
+        if (self.source_url) |value| gpa.free(value);
+        if (self.err) |value| gpa.free(value);
+        gpa.free(self.fetched_at);
+    }
+};
+
+const CurlFetch = struct {
+    body: ?[]u8 = null,
+    err: ?[]u8 = null,
+
+    fn deinit(self: *CurlFetch, gpa: std.mem.Allocator) void {
+        if (self.body) |value| gpa.free(value);
+        if (self.err) |value| gpa.free(value);
+    }
+};
+
+fn enrichLinks(io: Io, gpa: std.mem.Allocator) !void {
+    var urls: std.ArrayList([]u8) = .empty;
+    defer freeStringList(gpa, &urls);
+    try collectExternalLinks(io, gpa, &urls);
+
+    var previous = try loadLinkContextCache(io, gpa);
+    defer if (previous) |*parsed| parsed.deinit();
+
+    try Io.Dir.cwd().createDirPath(io, "src/content");
+
+    const fetched_at = try isoTimestamp(io, gpa);
+    defer gpa.free(fetched_at);
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    try out.appendSlice(gpa, "{\n  \"version\": 1,\n  \"updated_at\": ");
+    try appendJsonString(gpa, &out, fetched_at);
+    try out.appendSlice(gpa, ",\n  \"links\": {\n");
+
+    var fetched_count: usize = 0;
+    var preserved_count: usize = 0;
+    var failed_count: usize = 0;
+    for (urls.items, 0..) |url, index| {
+        if (index != 0) try out.appendSlice(gpa, ",\n");
+        try out.appendSlice(gpa, "    ");
+        try appendJsonString(gpa, &out, url);
+        try out.appendSlice(gpa, ": {\n");
+
+        const previous_context = if (previous) |*parsed| findLinkContext(&parsed.value, url) else null;
+        if (previous_context) |value| {
+            if (jsonStringField(value.*, "status")) |status| {
+                if (std.mem.eql(u8, status, "manual")) {
+                    try appendCachedContextObject(gpa, &out, url, value.*, fetched_at);
+                    preserved_count += 1;
+                    try out.appendSlice(gpa, "    }");
+                    continue;
+                }
+            }
+        }
+
+        var context = try enrichSingleLink(io, gpa, url, fetched_at);
+        defer context.deinit(gpa);
+        const failed = std.mem.eql(u8, context.status, "failed");
+        if (failed) {
+            if (previous_context) |value| {
+                if (isUsableCachedContext(value.*)) {
+                    try appendCachedContextObject(gpa, &out, url, value.*, fetched_at);
+                    preserved_count += 1;
+                    try out.appendSlice(gpa, "    }");
+                    continue;
+                }
+            }
+            failed_count += 1;
+        } else {
+            fetched_count += 1;
+        }
+        try appendLinkContextObject(gpa, &out, url, context);
+        try out.appendSlice(gpa, "    }");
+    }
+
+    try out.appendSlice(gpa, "\n  }\n}\n");
+    const data = try out.toOwnedSlice(gpa);
+    defer gpa.free(data);
+    try Io.Dir.cwd().writeFile(io, .{ .sub_path = link_context_path, .data = data });
+    std.debug.print("enriched {d} link(s), preserved {d}, failed {d}; wrote {s}\n", .{
+        fetched_count,
+        preserved_count,
+        failed_count,
+        link_context_path,
+    });
+}
+
+fn enrichSingleLink(io: Io, gpa: std.mem.Allocator, url: []const u8, fetched_at: []const u8) !LinkContextData {
+    if (try wikipediaSummaryUrl(gpa, url)) |summary_url| {
+        defer gpa.free(summary_url);
+        return try enrichWikipediaLink(io, gpa, url, summary_url, fetched_at);
+    }
+    if (try youtubeOembedUrl(gpa, url)) |oembed_url| {
+        defer gpa.free(oembed_url);
+        return try enrichYoutubeLink(io, gpa, url, oembed_url, fetched_at);
+    }
+    return try enrichGenericLink(io, gpa, url, fetched_at);
+}
+
+fn appendLinkContextObject(gpa: std.mem.Allocator, out: *std.ArrayList(u8), url: []const u8, context: LinkContextData) !void {
+    try appendJsonField(gpa, out, "status", context.status, true);
+    try appendJsonField(gpa, out, "kind", context.kind, true);
+    try appendJsonField(gpa, out, "title", context.title orelse displayHost(url) orelse url, true);
+    try appendJsonField(gpa, out, "summary", context.summary orelse "", true);
+    try appendJsonField(gpa, out, "site_name", context.site_name orelse displayHost(url) orelse "external", true);
+    try appendJsonField(gpa, out, "canonical_url", context.canonical_url orelse url, true);
+    try appendJsonField(gpa, out, "source_url", context.source_url orelse url, true);
+    try appendJsonField(gpa, out, "fetched_at", context.fetched_at, context.err != null);
+    if (context.err) |err| try appendJsonField(gpa, out, "error", err, false);
+}
+
+fn appendCachedContextObject(
+    gpa: std.mem.Allocator,
+    out: *std.ArrayList(u8),
+    url: []const u8,
+    context: std.json.Value,
+    fetched_at: []const u8,
+) !void {
+    const has_error = jsonStringField(context, "error") != null;
+    try appendJsonField(gpa, out, "status", jsonStringField(context, "status") orelse "manual", true);
+    try appendJsonField(gpa, out, "kind", jsonStringField(context, "kind") orelse "manual", true);
+    try appendJsonField(gpa, out, "title", jsonStringField(context, "title") orelse displayHost(url) orelse url, true);
+    try appendJsonField(gpa, out, "summary", jsonStringField(context, "summary") orelse "", true);
+    try appendJsonField(gpa, out, "site_name", jsonStringField(context, "site_name") orelse displayHost(url) orelse "external", true);
+    try appendJsonField(gpa, out, "canonical_url", jsonStringField(context, "canonical_url") orelse url, true);
+    try appendJsonField(gpa, out, "source_url", jsonStringField(context, "source_url") orelse url, true);
+    try appendJsonField(gpa, out, "fetched_at", jsonStringField(context, "fetched_at") orelse fetched_at, has_error);
+    if (jsonStringField(context, "error")) |err| try appendJsonField(gpa, out, "error", err, false);
+}
+
+fn isUsableCachedContext(context: std.json.Value) bool {
+    const status = jsonStringField(context, "status") orelse return false;
+    if (!std.mem.eql(u8, status, "ok") and !std.mem.eql(u8, status, "manual")) return false;
+    const summary = jsonStringField(context, "summary") orelse return false;
+    return std.mem.trim(u8, summary, " \t\r\n").len != 0;
+}
+
+fn enrichWikipediaLink(
+    io: Io,
+    gpa: std.mem.Allocator,
+    url: []const u8,
+    summary_url: []const u8,
+    fetched_at: []const u8,
+) !LinkContextData {
+    var fetch = try curlFetch(io, gpa, summary_url);
+    defer fetch.deinit(gpa);
+    if (fetch.body) |body| {
+        if (try contextFromWikipediaSummary(gpa, body, url, summary_url, fetched_at)) |context| return context;
+    }
+
+    const fallback_url = try wikipediaExtractUrl(gpa, url);
+    defer if (fallback_url) |value| gpa.free(value);
+    if (fallback_url) |extract_url| {
+        var fallback_fetch = try curlFetch(io, gpa, extract_url);
+        defer fallback_fetch.deinit(gpa);
+        if (fallback_fetch.body) |body| {
+            if (try contextFromWikipediaExtract(gpa, body, url, extract_url, fetched_at)) |context| return context;
+        }
+        if (fallback_fetch.err) |err| return try failedContext(gpa, url, "wikipedia", extract_url, fetched_at, err);
+    }
+
+    return try failedContext(gpa, url, "wikipedia", summary_url, fetched_at, fetch.err orelse "Wikipedia summary did not include an extract");
+}
+
+fn enrichGenericLink(io: Io, gpa: std.mem.Allocator, url: []const u8, fetched_at: []const u8) !LinkContextData {
+    var fetch = try curlFetch(io, gpa, url);
+    defer fetch.deinit(gpa);
+    if (fetch.err) |err| return try failedContext(gpa, url, "failed", url, fetched_at, err);
+    const body = fetch.body orelse return try failedContext(gpa, url, "failed", url, fetched_at, "empty response");
+
+    if (!looksLikeHtml(body)) {
+        return try failedContext(gpa, url, "failed", url, fetched_at, "response did not look like HTML");
+    }
+
+    const raw_title = firstNonEmpty(&.{
+        findMetaContentByNameOrProperty(body, "property", "og:title"),
+        findMetaContentByNameOrProperty(body, "name", "twitter:title"),
+        findElementContent(body, "title"),
+        displayHost(url),
+    }) orelse url;
+    const raw_meta_summary = firstNonEmpty(&.{
+        findMetaContentByNameOrProperty(body, "property", "og:description"),
+        findMetaContentByNameOrProperty(body, "name", "twitter:description"),
+        findMetaContentByNameOrProperty(body, "name", "description"),
+    });
+    const raw_summary = raw_meta_summary orelse findElementContent(body, "p");
+    const raw_site = firstNonEmpty(&.{
+        findMetaContentByNameOrProperty(body, "property", "og:site_name"),
+        displayHost(url),
+    }) orelse "external";
+    const raw_canonical = firstNonEmpty(&.{
+        findCanonicalLink(body),
+        findMetaContentByNameOrProperty(body, "property", "og:url"),
+        @as(?[]const u8, url),
+    }) orelse url;
+    const canonical = if (std.mem.eql(u8, raw_canonical, "undefined")) url else raw_canonical;
+
+    const title = try normalizePreviewText(gpa, raw_title, link_title_limit);
+    const summary = if (raw_summary) |value|
+        try normalizePreviewText(gpa, value, link_summary_limit)
+    else
+        try std.fmt.allocPrint(gpa, "External link to {s}.", .{displayHost(url) orelse "another site"});
+    const site_name = try normalizePreviewText(gpa, raw_site, 80);
+    const canonical_url = try normalizePreviewText(gpa, canonical, 400);
+    const source_url = try gpa.dupe(u8, url);
+    return .{
+        .status = "ok",
+        .kind = if (raw_meta_summary != null) "opengraph" else "generic",
+        .title = title,
+        .summary = summary,
+        .site_name = site_name,
+        .canonical_url = canonical_url,
+        .source_url = source_url,
+        .fetched_at = try gpa.dupe(u8, fetched_at),
+    };
+}
+
+fn enrichYoutubeLink(
+    io: Io,
+    gpa: std.mem.Allocator,
+    url: []const u8,
+    oembed_url: []const u8,
+    fetched_at: []const u8,
+) !LinkContextData {
+    var fetch = try curlFetch(io, gpa, oembed_url);
+    defer fetch.deinit(gpa);
+    if (fetch.err) |err| return try failedContext(gpa, url, "youtube", oembed_url, fetched_at, err);
+    const body = fetch.body orelse return try failedContext(gpa, url, "youtube", oembed_url, fetched_at, "empty response");
+
+    var parsed = std.json.parseFromSlice(std.json.Value, gpa, body, .{}) catch {
+        return try failedContext(gpa, url, "youtube", oembed_url, fetched_at, "YouTube oEmbed response was not JSON");
+    };
+    defer parsed.deinit();
+
+    const raw_title = jsonStringField(parsed.value, "title") orelse return try failedContext(gpa, url, "youtube", oembed_url, fetched_at, "YouTube oEmbed response had no title");
+    const author = jsonStringField(parsed.value, "author_name");
+    const summary = if (author) |name|
+        try std.fmt.allocPrint(gpa, "YouTube video by {s}.", .{name})
+    else
+        try gpa.dupe(u8, "YouTube video.");
+    defer gpa.free(summary);
+
+    return .{
+        .status = "ok",
+        .kind = "youtube",
+        .title = try normalizePreviewText(gpa, raw_title, link_title_limit),
+        .summary = try normalizePreviewText(gpa, summary, link_summary_limit),
+        .site_name = try gpa.dupe(u8, "YouTube"),
+        .canonical_url = try gpa.dupe(u8, url),
+        .source_url = try gpa.dupe(u8, oembed_url),
+        .fetched_at = try gpa.dupe(u8, fetched_at),
+    };
+}
+
+fn contextFromWikipediaSummary(
+    gpa: std.mem.Allocator,
+    body: []const u8,
+    url: []const u8,
+    summary_url: []const u8,
+    fetched_at: []const u8,
+) !?LinkContextData {
+    var parsed = std.json.parseFromSlice(std.json.Value, gpa, body, .{}) catch return null;
+    defer parsed.deinit();
+
+    const raw_summary = firstNonEmpty(&.{
+        jsonStringField(parsed.value, "extract"),
+        jsonStringField(parsed.value, "description"),
+    }) orelse return null;
+    const raw_title = firstNonEmpty(&.{ jsonStringField(parsed.value, "title"), displayHost(url) }) orelse url;
+    const canonical = jsonNestedString(parsed.value, &.{ "content_urls", "desktop", "page" }) orelse url;
+
+    return .{
+        .status = "ok",
+        .kind = "wikipedia",
+        .title = try normalizePreviewText(gpa, raw_title, link_title_limit),
+        .summary = try normalizePreviewText(gpa, raw_summary, link_summary_limit),
+        .site_name = try gpa.dupe(u8, "Wikipedia"),
+        .canonical_url = try gpa.dupe(u8, canonical),
+        .source_url = try gpa.dupe(u8, summary_url),
+        .fetched_at = try gpa.dupe(u8, fetched_at),
+    };
+}
+
+fn contextFromWikipediaExtract(
+    gpa: std.mem.Allocator,
+    body: []const u8,
+    url: []const u8,
+    extract_url: []const u8,
+    fetched_at: []const u8,
+) !?LinkContextData {
+    var parsed = std.json.parseFromSlice(std.json.Value, gpa, body, .{}) catch return null;
+    defer parsed.deinit();
+
+    const pages_value = jsonNestedValue(parsed.value, &.{ "query", "pages" }) orelse return null;
+    if (pages_value != .object) return null;
+    var it = pages_value.object.iterator();
+    while (it.next()) |entry| {
+        const page = entry.value_ptr.*;
+        const raw_summary = jsonStringField(page, "extract") orelse continue;
+        if (std.mem.trim(u8, raw_summary, " \t\r\n").len == 0) continue;
+        const raw_title = firstNonEmpty(&.{ jsonStringField(page, "title"), displayHost(url) }) orelse url;
+        return .{
+            .status = "ok",
+            .kind = "wikipedia",
+            .title = try normalizePreviewText(gpa, raw_title, link_title_limit),
+            .summary = try normalizePreviewText(gpa, raw_summary, link_summary_limit),
+            .site_name = try gpa.dupe(u8, "Wikipedia"),
+            .canonical_url = try gpa.dupe(u8, url),
+            .source_url = try gpa.dupe(u8, extract_url),
+            .fetched_at = try gpa.dupe(u8, fetched_at),
+        };
+    }
+    return null;
+}
+
+fn failedContext(
+    gpa: std.mem.Allocator,
+    url: []const u8,
+    kind: []const u8,
+    source_url: []const u8,
+    fetched_at: []const u8,
+    err: []const u8,
+) !LinkContextData {
+    return .{
+        .status = "failed",
+        .kind = kind,
+        .title = if (displayHost(url)) |host| try gpa.dupe(u8, host) else try gpa.dupe(u8, url),
+        .summary = try std.fmt.allocPrint(gpa, "External link to {s}.", .{displayHost(url) orelse "another site"}),
+        .site_name = if (displayHost(url)) |host| try gpa.dupe(u8, host) else try gpa.dupe(u8, "external"),
+        .canonical_url = try gpa.dupe(u8, url),
+        .source_url = try gpa.dupe(u8, source_url),
+        .fetched_at = try gpa.dupe(u8, fetched_at),
+        .err = try normalizePreviewText(gpa, err, 220),
+    };
+}
+
+fn curlFetch(io: Io, gpa: std.mem.Allocator, url: []const u8) !CurlFetch {
+    const argv = [_][]const u8{
+        "curl",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-time",
+        "8",
+        "--header",
+        "Accept: text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+        "--header",
+        "Accept-Encoding: identity",
+        "--range",
+        "0-1048575",
+        "--user-agent",
+        curl_user_agent,
+        url,
+    };
+    const result = std.process.run(gpa, io, .{
+        .argv = &argv,
+        .expand_arg0 = .expand,
+        .stdout_limit = .limited(max_fetch_size),
+        .stderr_limit = .limited(64 * 1024),
+    }) catch |err| {
+        if (err == error.FileNotFound) {
+            std.debug.print("curl is required for `zig build enrich-links`; install curl or refresh {s} manually\n", .{link_context_path});
+        }
+        if (err == error.StreamTooLong) {
+            return .{ .err = try std.fmt.allocPrint(gpa, "response exceeded {d} byte metadata fetch limit", .{max_fetch_size}) };
+        }
+        return err;
+    };
+
+    const ok = switch (result.term) {
+        .exited => |code| code == 0,
+        else => false,
+    };
+    if (ok) {
+        gpa.free(result.stderr);
+        return .{ .body = result.stdout };
+    }
+
+    const trimmed = std.mem.trim(u8, result.stderr, " \t\r\n");
+    const message = if (trimmed.len == 0)
+        try std.fmt.allocPrint(gpa, "curl failed for {s}", .{url})
+    else
+        try gpa.dupe(u8, trimmed);
+    gpa.free(result.stdout);
+    gpa.free(result.stderr);
+    return .{ .err = message };
+}
+
+fn wikipediaSummaryUrl(gpa: std.mem.Allocator, url: []const u8) !?[]u8 {
+    const host = fullHost(url) orelse return null;
+    const display = displayHost(url) orelse return null;
+    if (!std.mem.endsWith(u8, display, "wikipedia.org")) return null;
+    const path_start = host.end;
+    if (!std.mem.startsWith(u8, url[path_start..], "/wiki/")) return null;
+    const raw_title = url[path_start + "/wiki/".len .. urlPathEnd(url, path_start + "/wiki/".len)];
+    if (raw_title.len == 0) return null;
+    return try std.fmt.allocPrint(gpa, "{s}://{s}/api/rest_v1/page/summary/{s}", .{
+        url[0..host.scheme_end],
+        url[host.start..host.end],
+        raw_title,
+    });
+}
+
+fn youtubeOembedUrl(gpa: std.mem.Allocator, url: []const u8) !?[]u8 {
+    const display = displayHost(url) orelse return null;
+    if (!std.mem.eql(u8, display, "youtu.be") and
+        !std.mem.eql(u8, display, "youtube.com") and
+        !std.mem.endsWith(u8, display, ".youtube.com"))
+    {
+        return null;
+    }
+    const encoded = try percentEncode(gpa, url, .query);
+    defer gpa.free(encoded);
+    return try std.fmt.allocPrint(gpa, "https://www.youtube.com/oembed?url={s}&format=json", .{encoded});
+}
+
+fn wikipediaExtractUrl(gpa: std.mem.Allocator, url: []const u8) !?[]u8 {
+    const host = fullHost(url) orelse return null;
+    const display = displayHost(url) orelse return null;
+    if (!std.mem.endsWith(u8, display, "wikipedia.org")) return null;
+    const path_start = host.end;
+    if (!std.mem.startsWith(u8, url[path_start..], "/wiki/")) return null;
+    const raw_title = url[path_start + "/wiki/".len .. urlPathEnd(url, path_start + "/wiki/".len)];
+    if (raw_title.len == 0) return null;
+    const title = try percentEncode(gpa, raw_title, .query);
+    defer gpa.free(title);
+    return try std.fmt.allocPrint(
+        gpa,
+        "{s}://{s}/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&titles={s}",
+        .{ url[0..host.scheme_end], url[host.start..host.end], title },
+    );
+}
+
+const HostRange = struct {
+    scheme_end: usize,
+    start: usize,
+    end: usize,
+};
+
+fn fullHost(url: []const u8) ?HostRange {
+    const scheme_end = std.mem.indexOf(u8, url, "://") orelse return null;
+    const start = scheme_end + "://".len;
+    var end = start;
+    while (end < url.len and url[end] != '/' and url[end] != '?' and url[end] != '#') : (end += 1) {}
+    if (end == start) return null;
+    return .{ .scheme_end = scheme_end, .start = start, .end = end };
+}
+
+fn urlPathEnd(url: []const u8, start: usize) usize {
+    var end = start;
+    while (end < url.len and url[end] != '?' and url[end] != '#') : (end += 1) {}
+    return end;
+}
+
+const PercentEncodeMode = enum { path, query };
+
+fn percentEncode(gpa: std.mem.Allocator, value: []const u8, mode: PercentEncodeMode) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    const hex = "0123456789ABCDEF";
+    for (value) |char| {
+        const keep = std.ascii.isAlphanumeric(char) or char == '-' or char == '_' or char == '.' or char == '~' or
+            (mode == .path and (char == '%' or char == '(' or char == ')' or char == ':' or char == '@'));
+        if (keep) {
+            try out.append(gpa, char);
+        } else if (mode == .query and char == ' ') {
+            try out.append(gpa, '+');
+        } else {
+            try out.append(gpa, '%');
+            try out.append(gpa, hex[char >> 4]);
+            try out.append(gpa, hex[char & 0x0f]);
+        }
+    }
+    return try out.toOwnedSlice(gpa);
+}
+
+fn looksLikeHtml(body: []const u8) bool {
+    const prefix = body[0..@min(body.len, 4096)];
+    return std.ascii.indexOfIgnoreCase(prefix, "<html") != null or
+        std.ascii.indexOfIgnoreCase(prefix, "<!doctype html") != null or
+        std.ascii.indexOfIgnoreCase(prefix, "<meta") != null or
+        std.ascii.indexOfIgnoreCase(prefix, "<title") != null;
+}
+
+fn findMetaContentByNameOrProperty(html: []const u8, attr: []const u8, expected: []const u8) ?[]const u8 {
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<meta")) |meta_start| {
+        const tag_end = std.mem.indexOfScalarPos(u8, html, meta_start, '>') orelse return null;
+        const tag = html[meta_start..tag_end];
+        if (attributeEquals(tag, attr, expected)) {
+            if (attributeValue(tag, "content")) |content| return content;
+        }
+        search_pos = tag_end + 1;
+    }
+    return null;
+}
+
+fn findCanonicalLink(html: []const u8) ?[]const u8 {
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<link")) |link_start| {
+        const tag_end = std.mem.indexOfScalarPos(u8, html, link_start, '>') orelse return null;
+        const tag = html[link_start..tag_end];
+        if (attributeContainsWord(tag, "rel", "canonical")) {
+            if (attributeValue(tag, "href")) |href| return href;
+        }
+        search_pos = tag_end + 1;
+    }
+    return null;
+}
+
+fn attributeContainsWord(tag: []const u8, attr_name: []const u8, expected: []const u8) bool {
+    const value = attributeValue(tag, attr_name) orelse return false;
+    var it = std.mem.tokenizeAny(u8, value, " \t\r\n");
+    while (it.next()) |word| {
+        if (std.ascii.eqlIgnoreCase(word, expected)) return true;
+    }
+    return false;
+}
+
+fn jsonNestedValue(value: std.json.Value, path: []const []const u8) ?std.json.Value {
+    var cursor = value;
+    for (path) |field| {
+        if (cursor != .object) return null;
+        cursor = cursor.object.get(field) orelse return null;
+    }
+    return cursor;
+}
+
+fn jsonNestedString(value: std.json.Value, path: []const []const u8) ?[]const u8 {
+    const child = jsonNestedValue(value, path) orelse return null;
+    if (child != .string) return null;
+    return child.string;
+}
+
+fn normalizePreviewText(gpa: std.mem.Allocator, raw: []const u8, limit: usize) ![]u8 {
+    const plain = try htmlText(gpa, raw);
+    defer gpa.free(plain);
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    var last_space = true;
+    for (plain) |char| {
+        if (std.ascii.isWhitespace(char)) {
+            if (!last_space) {
+                try out.append(gpa, ' ');
+                last_space = true;
+            }
+        } else {
+            try out.append(gpa, char);
+            last_space = false;
+        }
+    }
+    while (out.items.len != 0 and out.items[out.items.len - 1] == ' ') _ = out.pop();
+
+    if (out.items.len <= limit) return try out.toOwnedSlice(gpa);
+    const end = utf8SafePrefixLen(out.items, limit);
+    const trimmed = std.mem.trimEnd(u8, out.items[0..end], " \t\r\n.,;:");
+    const result = try std.fmt.allocPrint(gpa, "{s}...", .{trimmed});
+    out.deinit(gpa);
+    return result;
+}
+
+fn utf8SafePrefixLen(value: []const u8, max_len: usize) usize {
+    if (value.len <= max_len) return value.len;
+    var end = max_len;
+    while (end > 0 and (value[end] & 0xc0) == 0x80) end -= 1;
+    return end;
+}
+
+fn isoTimestamp(io: Io, gpa: std.mem.Allocator) ![]u8 {
+    const now = Io.Clock.real.now(io).nanoseconds;
+    const secs: u64 = if (now > 0) @intCast(@divTrunc(now, std.time.ns_per_s)) else 0;
+    const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = secs };
+    const epoch_day = epoch_seconds.getEpochDay();
+    const day_seconds = epoch_seconds.getDaySeconds();
+    const year_day = epoch_day.calculateYearDay();
+    const month_day = year_day.calculateMonthDay();
+    return try std.fmt.allocPrint(
+        gpa,
+        "{d:0>4}-{d:0>2}-{d:0>2}T{d:0>2}:{d:0>2}:{d:0>2}Z",
+        .{
+            year_day.year,
+            month_day.month.numeric(),
+            month_day.day_index + 1,
+            day_seconds.getHoursIntoDay(),
+            day_seconds.getMinutesIntoHour(),
+            day_seconds.getSecondsIntoMinute(),
+        },
+    );
 }
 
 fn writeArchivePages(io: Io, gpa: std.mem.Allocator, style_version: [16]u8) !usize {

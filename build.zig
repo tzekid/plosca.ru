@@ -55,4 +55,9 @@ pub fn build(b: *std.Build) void {
     check_site_cmd.addArg("check");
     const check_site_step = b.step("check-site", "Check generated CSS, cache-busters, and local asset references");
     check_site_step.dependOn(&check_site_cmd.step);
+
+    const enrich_links_cmd = b.addRunArtifact(site_tool);
+    enrich_links_cmd.addArg("enrich-links");
+    const enrich_links_step = b.step("enrich-links", "Refresh cached external-link context with curl");
+    enrich_links_step.dependOn(&enrich_links_cmd.step);
 }

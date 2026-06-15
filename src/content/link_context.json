@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-15T08:44:27Z",
+  "links": {
+    "https://www.linkedin.com/in/mircea-ilie-ploscaru/": {
+      "status": "ok",
+      "kind": "opengraph",
+      "title": "Mircea Ilie Ploscaru - committance AG | LinkedIn",
+      "summary": "Experience: committance AG · Education: Goethe University · Location: Frankfurt · 338 connections on LinkedIn. View Mircea Ilie Ploscaru’s profile on LinkedIn, a professional community of 1 billion members.",
+      "site_name": "linkedin.com",
+      "canonical_url": "https://de.linkedin.com/in/mircea-ilie-ploscaru",
+      "source_url": "https://www.linkedin.com/in/mircea-ilie-ploscaru/",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://github.com/tzekid": {
+      "status": "ok",
+      "kind": "opengraph",
+      "title": "tzekid - Overview",
+      "summary": "Student interested in psychology and tech. tzekid has 34 repositories available. Follow their code on GitHub.",
+      "site_name": "GitHub",
+      "canonical_url": "https://github.com/tzekid",
+      "source_url": "https://github.com/tzekid",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://www.staticgen.com/": {
+      "status": "ok",
+      "kind": "opengraph",
+      "title": "Static Site Generators - Top Open Source SSGs | Jamstack",
+      "summary": "Check out this showcase of some of the best, open source static site generators. This is community-drive so be sure to submit your favorite today!",
+      "site_name": "Jamstack.org",
+      "canonical_url": "https://jamstack.org/generators/",
+      "source_url": "https://www.staticgen.com/",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://en.wikipedia.org/wiki/Reinventing_the_wheel": {
+      "status": "ok",
+      "kind": "wikipedia",
+      "title": "Reinventing the wheel",
+      "summary": "To reinvent the wheel is to attempt to duplicate—most likely with inferior results—a basic method that has already previously been created or optimized by others. The inspiration for this idiomatic metaphor is that the wheel is an ancient archetype of human ingenuity. As it has already been invented and is not considered to have any inherent flaws, an at...",
+      "site_name": "Wikipedia",
+      "canonical_url": "https://en.wikipedia.org/wiki/Reinventing_the_wheel",
+      "source_url": "https://en.wikipedia.org/api/rest_v1/page/summary/Reinventing_the_wheel",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://en.wikipedia.org/wiki/KISS_principle": {
+      "status": "ok",
+      "kind": "wikipedia",
+      "title": "KISS principle",
+      "summary": "KISS is a design principle first noted by the U.S. Navy in 1960. First seen partly in American English by at least 1938, KISS implies that simplicity should be a design goal. The phrase has been associated with aircraft engineer Kelly Johnson. The term \"KISS principle\" was in popular use by 1970. Variations on the phrase include \"keep it super simple\", \"keep...",
+      "site_name": "Wikipedia",
+      "canonical_url": "https://en.wikipedia.org/wiki/KISS_principle",
+      "source_url": "https://en.wikipedia.org/api/rest_v1/page/summary/KISS_principle",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://pandoc.org/demos.html": {
+      "status": "ok",
+      "kind": "opengraph",
+      "title": "Pandoc - Demos",
+      "summary": "A universal document converter",
+      "site_name": "Pandoc",
+      "canonical_url": "https://pandoc.org/demos.html",
+      "source_url": "https://pandoc.org/demos.html",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://youtu.be/bkgeFi4PwOg": {
+      "status": "ok",
+      "kind": "youtube",
+      "title": "Don't Be a Bash BRAINLET! (Shell is all about streams!)",
+      "summary": "YouTube video by Luke Smith.",
+      "site_name": "YouTube",
+      "canonical_url": "https://youtu.be/bkgeFi4PwOg",
+      "source_url": "https://www.youtube.com/oembed?url=https%3A%2F%2Fyoutu.be%2FbkgeFi4PwOg&format=json",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "http://eradman.com/entrproject/": {
+      "status": "ok",
+      "kind": "generic",
+      "title": "entr(1)",
+      "summary": "Run arbitrary commands when files change",
+      "site_name": "eradman.com",
+      "canonical_url": "http://eradman.com/entrproject/",
+      "source_url": "http://eradman.com/entrproject/",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    },
+    "https://en.wikipedia.org/wiki/Wc_(Unix)": {
+      "status": "ok",
+      "kind": "wikipedia",
+      "title": "Wc (Unix)",
+      "summary": "wc is a command in Unix, Plan 9, Inferno, and operating systems that are Unix-like. The program reads either standard input or a list of computer files and generates one or more of the following statistics: newline count, word count, and byte count. If a list of files is provided, both individual file and total statistics follow.",
+      "site_name": "Wikipedia",
+      "canonical_url": "https://en.wikipedia.org/wiki/Wc_(Unix)",
+      "source_url": "https://en.wikipedia.org/api/rest_v1/page/summary/Wc_(Unix)",
+      "fetched_at": "2026-06-15T08:44:27Z"
+    }
+  }
+}

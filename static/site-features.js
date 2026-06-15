@@ -59,7 +59,7 @@
         const box = ensurePreview();
         const rect = anchor.getBoundingClientRect();
         const margin = 14;
-        const width = Math.min(340, window.innerWidth - margin * 2);
+        const width = Math.min(390, window.innerWidth - margin * 2);
         box.style.maxWidth = `${width}px`;
 
         const previewRect = box.getBoundingClientRect();
@@ -82,13 +82,15 @@
         if (!annotation || activeAnchor !== anchor) return;
 
         const box = ensurePreview();
+        const source = escapeHtml(annotation.site_name || annotation.context_kind || annotation.kind || "link");
         const archive = annotation.archive
-            ? `<a href="${annotation.archive}">archive record</a>`
+            ? `<a href="${escapeHtml(annotation.archive)}">archive record</a>`
             : "";
+        const meta = [source, archive].filter(Boolean).join(" · ");
         box.innerHTML = `
             <strong>${escapeHtml(annotation.title || annotation.text || annotation.href)}</strong>
             <span>${escapeHtml(annotation.summary || annotation.href)}</span>
-            <small>${escapeHtml(annotation.kind || "link")}${archive ? ` · ${archive}` : ""}</small>
+            <small>${meta}</small>
         `;
         box.hidden = false;
         positionPreview(anchor);

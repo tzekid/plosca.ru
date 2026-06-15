@@ -6,8 +6,11 @@
       "kind": "external",
       "source": "/about",
       "source_title": "About",
-      "title": "LinkedIn",
-      "summary": "External link recorded by the static site generator.",
+      "title": "Mircea Ilie Ploscaru - committance AG | LinkedIn",
+      "summary": "Experience: committance AG · Education: Goethe University · Location: Frankfurt · 338 connections on LinkedIn. View Mircea Ilie Ploscaru’s profile on LinkedIn, a professional community of 1 billion members.",
+      "site_name": "linkedin.com",
+      "context_kind": "opengraph",
+      "canonical_url": "https://de.linkedin.com/in/mircea-ilie-ploscaru",
       "archive": "/archive/2000405390f6a649.html"
     },
     {
@@ -16,8 +19,11 @@
       "kind": "external",
       "source": "/about",
       "source_title": "About",
-      "title": "GitHub",
-      "summary": "External link recorded by the static site generator.",
+      "title": "tzekid - Overview",
+      "summary": "Student interested in psychology and tech. tzekid has 34 repositories available. Follow their code on GitHub.",
+      "site_name": "GitHub",
+      "context_kind": "opengraph",
+      "canonical_url": "https://github.com/tzekid",
       "archive": "/archive/37527e48396d210f.html"
     },
     {
@@ -35,8 +41,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "static site generator",
-      "summary": "External link recorded by the static site generator.",
+      "title": "Static Site Generators - Top Open Source SSGs | Jamstack",
+      "summary": "Check out this showcase of some of the best, open source static site generators. This is community-drive so be sure to submit your favorite today!",
+      "site_name": "Jamstack.org",
+      "context_kind": "opengraph",
+      "canonical_url": "https://jamstack.org/generators/",
       "archive": "/archive/155fda74a6e1d682.html"
     },
     {
@@ -45,8 +54,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "build my own",
-      "summary": "External link recorded by the static site generator.",
+      "title": "Reinventing the wheel",
+      "summary": "To reinvent the wheel is to attempt to duplicate—most likely with inferior results—a basic method that has already previously been created or optimized by others. The inspiration for this idiomatic metaphor is that the wheel is an ancient archetype of human ingenuity. As it has already been invented and is not considered to have any inherent flaws, an at...",
+      "site_name": "Wikipedia",
+      "context_kind": "wikipedia",
+      "canonical_url": "https://en.wikipedia.org/wiki/Reinventing_the_wheel",
       "archive": "/archive/e4888b8bd8657028.html"
     },
     {
@@ -55,8 +67,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "K.I.S.S.",
-      "summary": "External link recorded by the static site generator.",
+      "title": "KISS principle",
+      "summary": "KISS is a design principle first noted by the U.S. Navy in 1960. First seen partly in American English by at least 1938, KISS implies that simplicity should be a design goal. The phrase has been associated with aircraft engineer Kelly Johnson. The term \"KISS principle\" was in popular use by 1970. Variations on the phrase include \"keep it super simple\", \"keep...",
+      "site_name": "Wikipedia",
+      "context_kind": "wikipedia",
+      "canonical_url": "https://en.wikipedia.org/wiki/KISS_principle",
       "archive": "/archive/0540764735407c9c.html"
     },
     {
@@ -65,8 +80,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "pandoc",
-      "summary": "External link recorded by the static site generator.",
+      "title": "Pandoc - Demos",
+      "summary": "A universal document converter",
+      "site_name": "Pandoc",
+      "context_kind": "opengraph",
+      "canonical_url": "https://pandoc.org/demos.html",
       "archive": "/archive/b970deabe725255c.html"
     },
     {
@@ -75,8 +93,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "streams",
-      "summary": "External link recorded by the static site generator.",
+      "title": "Don't Be a Bash BRAINLET! (Shell is all about streams!)",
+      "summary": "YouTube video by Luke Smith.",
+      "site_name": "YouTube",
+      "context_kind": "youtube",
+      "canonical_url": "https://youtu.be/bkgeFi4PwOg",
       "archive": "/archive/139d5101e58c2a7b.html"
     },
     {
@@ -85,8 +106,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "entr",
-      "summary": "External link recorded by the static site generator.",
+      "title": "entr(1)",
+      "summary": "Run arbitrary commands when files change",
+      "site_name": "eradman.com",
+      "context_kind": "generic",
+      "canonical_url": "http://eradman.com/entrproject/",
       "archive": "/archive/476664c3bfc8078c.html"
     },
     {
@@ -95,8 +119,11 @@
       "kind": "external",
       "source": "/hello_world",
       "source_title": "Hello World",
-      "title": "wc",
-      "summary": "External link recorded by the static site generator.",
+      "title": "Wc (Unix)",
+      "summary": "wc is a command in Unix, Plan 9, Inferno, and operating systems that are Unix-like. The program reads either standard input or a list of computer files and generates one or more of the following statistics: newline count, word count, and byte count. If a list of files is provided, both individual file and total statistics follow.",
+      "site_name": "Wikipedia",
+      "context_kind": "wikipedia",
+      "canonical_url": "https://en.wikipedia.org/wiki/Wc_(Unix)",
       "archive": "/archive/d41b867a3dbbe912.html"
     },
     {
