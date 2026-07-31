@@ -1,11 +1,19 @@
 const std = @import("std");
+const model = @import("site_model");
+const views = @import("site_views");
+const web_htmx = @import("web_htmx");
 
 const Io = std.Io;
+const PageKind = model.PageKind;
+const PageMeta = model.PageMeta;
+const pages = model.pages;
 
 const source_css_path = "src/styles/site.css";
 const generated_css_path = "static/style.css";
 const theme_js_path = "static/theme.js";
-const site_features_js_path = "static/site-features.js";
+const preview_controller_js_path = "static/preview-controller.js";
+const htmx_js_path = "static/vendor/htmx.min.js";
+const htmx_version_path = "static/vendor/htmx.version";
 const link_context_path = "src/content/link_context.json";
 const static_dir_path = "static";
 const metadata_dir_path = "static/metadata";
@@ -14,7 +22,9 @@ const related_dir_path = "static/metadata/related";
 const backlinks_dir_path = "static/metadata/backlinks";
 const similar_dir_path = "static/metadata/similar";
 const connections_dir_path = "static/metadata/connections";
-const annotations_json_path = "static/metadata/annotations.json";
+const previews_dir_path = "static/metadata/previews";
+const connections_region_start = "<!-- generated-connections:start -->";
+const connections_region_end = "<!-- generated-connections:end -->";
 const external_links_json_path = "static/metadata/external-links.json";
 const archive_dir_path = "static/archive";
 const archive_index_path = "static/archive/index.html";
@@ -39,99 +49,8 @@ const PdfPreviewError = error{PdfPreviewFailed};
 const AssetVersions = struct {
     style: [16]u8,
     theme: [16]u8,
-    site_features: [16]u8,
-};
-
-const PageKind = enum {
-    home,
-    article,
-    profile,
-    prose,
-    error_page,
-};
-
-const PageMeta = struct {
-    slug: []const u8,
-    route: []const u8,
-    file: []const u8,
-    title: []const u8,
-    description: []const u8,
-    date: ?[]const u8 = null,
-    updated: ?[]const u8 = null,
-    tags: []const []const u8,
-    related: []const []const u8,
-    kind: PageKind,
-};
-
-const home_tags = [_][]const u8{ "personal", "index", "writing" };
-const home_related = [_][]const u8{ "/hello_world", "/about", "/prose" };
-const about_tags = [_][]const u8{ "profile", "resume", "work" };
-const about_related = [_][]const u8{ "/", "/resume.pdf" };
-const hello_tags = [_][]const u8{ "website", "static-site", "pandoc", "bash" };
-const hello_related = [_][]const u8{ "/prose", "/about" };
-const prose_tags = [_][]const u8{ "prose", "poetry", "writing" };
-const prose_related = [_][]const u8{ "/hello_world", "/" };
-const error_tags = [_][]const u8{"recovery"};
-const error_related = [_][]const u8{ "/", "/about", "/hello_world", "/prose" };
-
-const pages = [_]PageMeta{
-    .{
-        .slug = "home",
-        .route = "/",
-        .file = "index.html",
-        .title = "Ilie Ploscaru",
-        .description = "Personal site of Ilie Ploscaru, interested in psychology and tech.",
-        .date = "2019-01-01",
-        .updated = "2026-06-14",
-        .tags = home_tags[0..],
-        .related = home_related[0..],
-        .kind = .home,
-    },
-    .{
-        .slug = "about",
-        .route = "/about",
-        .file = "about.html",
-        .title = "About",
-        .description = "About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.",
-        .updated = "2026-06-14",
-        .tags = about_tags[0..],
-        .related = about_related[0..],
-        .kind = .profile,
-    },
-    .{
-        .slug = "hello_world",
-        .route = "/hello_world",
-        .file = "hello_world.html",
-        .title = "Hello World",
-        .description = "Hello World: first post by Ilie Ploscaru introducing the site and its themes.",
-        .date = "2019-01-01",
-        .updated = "2026-06-14",
-        .tags = hello_tags[0..],
-        .related = hello_related[0..],
-        .kind = .article,
-    },
-    .{
-        .slug = "prose",
-        .route = "/prose",
-        .file = "prose.html",
-        .title = "Prose",
-        .description = "Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.",
-        .updated = "2026-06-14",
-        .tags = prose_tags[0..],
-        .related = prose_related[0..],
-        .kind = .prose,
-    },
-    .{
-        .slug = "404",
-        .route = "/404",
-        .file = "404.html",
-        .title = "Page not found | Ilie Ploscaru",
-        .description = "The requested page was not found. Return to the main pages on plosca.ru.",
-        .updated = "2026-06-14",
-        .tags = error_tags[0..],
-        .related = error_related[0..],
-        .kind = .error_page,
-    },
+    preview_controller: [16]u8,
+    htmx: [16]u8,
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -181,10 +100,12 @@ fn writeSite(io: Io, gpa: std.mem.Allocator) !void {
     const versions = try readAssetVersions(io, gpa, css);
     const updated = try syncHtmlAssetRefs(io, gpa, versions, true);
     const artifacts = try writeGeneratedArtifacts(io, gpa, versions);
+    const composed = try syncGeneratedConnections(io, gpa, true);
+    const preview_markup = try syncPreviewMarkup(io, gpa, true);
     const compressed = try writeCompressedAssets(io, gpa);
     std.debug.print(
-        "asset versions style={s} theme={s} site-features={s}; updated {d} asset ref(s), enhanced {d} HTML file(s), generated {d} metadata artifact(s), compressed {d} asset(s)\n",
-        .{ versions.style[0..], versions.theme[0..], versions.site_features[0..], updated, enhanced, artifacts, compressed },
+        "asset versions style={s} theme={s} preview-controller={s} htmx={s}; updated {d} asset ref(s), enhanced {d} HTML file(s), composed {d} page(s), preview-marked {d} page(s), generated {d} metadata artifact(s), compressed {d} asset(s)\n",
+        .{ versions.style[0..], versions.theme[0..], versions.preview_controller[0..], versions.htmx[0..], updated, enhanced, composed, preview_markup, artifacts, compressed },
     );
 }
 
@@ -208,26 +129,54 @@ fn checkSite(io: Io, gpa: std.mem.Allocator) !void {
     failures += try syncHtmlAssetRefs(io, gpa, versions, false);
     failures += try checkGeneratedMetadata(io, gpa);
     failures += try checkGeneratedArtifacts(io, gpa);
+    failures += try syncGeneratedConnections(io, gpa, false);
+    failures += try syncPreviewMarkup(io, gpa, false);
     failures += try auditReferences(io, gpa, generated_css);
     failures += try auditContent(io, gpa);
+    failures += try checkHtmxVendor(io, gpa);
     failures += try checkCompressedAssets(io, gpa);
 
     if (failures != 0) return CheckError.SiteCheckFailed;
-    std.debug.print("site check passed; asset versions style={s} theme={s} site-features={s}\n", .{ versions.style[0..], versions.theme[0..], versions.site_features[0..] });
+    std.debug.print("site check passed; asset versions style={s} theme={s} preview-controller={s} htmx={s}\n", .{ versions.style[0..], versions.theme[0..], versions.preview_controller[0..], versions.htmx[0..] });
 }
 
 fn readAssetVersions(io: Io, gpa: std.mem.Allocator, css: []const u8) !AssetVersions {
     const cwd = Io.Dir.cwd();
     const theme_js = try cwd.readFileAlloc(io, theme_js_path, gpa, .limited(max_file_size));
     defer gpa.free(theme_js);
-    const site_features_js = try cwd.readFileAlloc(io, site_features_js_path, gpa, .limited(max_file_size));
-    defer gpa.free(site_features_js);
+    const preview_controller_js = try cwd.readFileAlloc(io, preview_controller_js_path, gpa, .limited(max_file_size));
+    defer gpa.free(preview_controller_js);
+    const htmx_js = try cwd.readFileAlloc(io, htmx_js_path, gpa, .limited(max_file_size));
+    defer gpa.free(htmx_js);
 
     return .{
         .style = assetVersion(css),
         .theme = assetVersion(theme_js),
-        .site_features = assetVersion(site_features_js),
+        .preview_controller = assetVersion(preview_controller_js),
+        .htmx = assetVersion(htmx_js),
     };
+}
+
+fn checkHtmxVendor(io: Io, gpa: std.mem.Allocator) !usize {
+    const cwd = Io.Dir.cwd();
+    const artifact = try cwd.readFileAlloc(io, htmx_js_path, gpa, .limited(max_file_size));
+    defer gpa.free(artifact);
+    const version = try cwd.readFileAlloc(io, htmx_version_path, gpa, .limited(max_file_size));
+    defer gpa.free(version);
+
+    var failures: usize = 0;
+    if (!web_htmx.verifyPinnedAsset(artifact)) {
+        std.debug.print("{s}: SHA-256 does not match the reviewed HTMX artifact\n", .{htmx_js_path});
+        failures += 1;
+    }
+    if (std.mem.indexOf(u8, version, "version=" ++ web_htmx.pinned_version ++ "\n") == null or
+        std.mem.indexOf(u8, version, "commit=" ++ web_htmx.pinned_commit ++ "\n") == null or
+        std.mem.indexOf(u8, version, "sha256=" ++ web_htmx.pinned_asset_sha256 ++ "\n") == null)
+    {
+        std.debug.print("{s}: version, revision, or checksum metadata is stale\n", .{htmx_version_path});
+        failures += 1;
+    }
+    return failures;
 }
 
 fn assetVersion(contents: []const u8) [16]u8 {
@@ -618,6 +567,7 @@ fn writeGeneratedArtifacts(io: Io, gpa: std.mem.Allocator, versions: AssetVersio
     try cwd.createDirPath(io, backlinks_dir_path);
     try cwd.createDirPath(io, similar_dir_path);
     try cwd.createDirPath(io, connections_dir_path);
+    try cwd.createDirPath(io, previews_dir_path);
     try cwd.createDirPath(io, archive_dir_path);
 
     var written: usize = 0;
@@ -645,10 +595,10 @@ fn writeGeneratedArtifacts(io: Io, gpa: std.mem.Allocator, versions: AssetVersio
         written += 1;
     }
 
-    const annotations = try renderAnnotationsJson(io, gpa);
-    defer gpa.free(annotations);
-    try cwd.writeFile(io, .{ .sub_path = annotations_json_path, .data = annotations });
-    written += 1;
+    var annotation_arena: std.heap.ArenaAllocator = .init(gpa);
+    defer annotation_arena.deinit();
+    const annotation_model = try collectAnnotations(io, annotation_arena.allocator());
+    written += try writePreviewFragments(io, gpa, annotation_model);
 
     const external_links = try renderExternalLinksJson(io, gpa);
     defer gpa.free(external_links);
@@ -664,7 +614,6 @@ fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
     var failures: usize = 0;
 
     const required_paths = [_][]const u8{
-        annotations_json_path,
         external_links_json_path,
         archive_index_path,
     };
@@ -675,9 +624,7 @@ fn checkGeneratedArtifacts(io: Io, gpa: std.mem.Allocator) !usize {
         }
     }
 
-    const expected_annotations = try renderAnnotationsJson(io, gpa);
-    defer gpa.free(expected_annotations);
-    failures += try checkGeneratedFileContents(io, gpa, annotations_json_path, expected_annotations);
+    failures += try checkPreviewFragments(io, gpa);
 
     const expected_external_links = try renderExternalLinksJson(io, gpa);
     defer gpa.free(expected_external_links);
@@ -837,14 +784,6 @@ fn appendJsonNullField(gpa: std.mem.Allocator, out: *std.ArrayList(u8), key: []c
     try out.appendSlice(gpa, "\n");
 }
 
-fn appendJsonNumberField(gpa: std.mem.Allocator, out: *std.ArrayList(u8), key: []const u8, value: usize, comma: bool) !void {
-    try out.appendSlice(gpa, "      ");
-    try appendJsonString(gpa, out, key);
-    try out.print(gpa, ": {d}", .{value});
-    if (comma) try out.appendSlice(gpa, ",");
-    try out.appendSlice(gpa, "\n");
-}
-
 fn appendJsonArrayField(
     gpa: std.mem.Allocator,
     out: *std.ArrayList(u8),
@@ -881,124 +820,153 @@ fn appendJsonString(gpa: std.mem.Allocator, out: *std.ArrayList(u8), value: []co
 }
 
 fn renderRelatedFragment(gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
-    var out: std.ArrayList(u8) = .empty;
-    errdefer out.deinit(gpa);
-    try appendPageListSection(gpa, &out, "Related", "Pages explicitly connected to this page.", page.related);
-    return try out.toOwnedSlice(gpa);
+    var links: [pages.len + 4]model.LinkView = undefined;
+    return views.renderPageList(gpa, relatedView(page, &links));
 }
 
 fn renderBacklinksFragment(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
-    var out: std.ArrayList(u8) = .empty;
-    errdefer out.deinit(gpa);
-
-    try out.appendSlice(gpa, "<section class=\"generated-section generated-backlinks\">\n");
-    try out.appendSlice(gpa, "  <h3>Backlinks</h3>\n");
-    try out.appendSlice(gpa, "  <p>Local pages that link here.</p>\n");
-    try out.appendSlice(gpa, "  <ul>\n");
-
-    var count: usize = 0;
-    for (pages) |source| {
-        if (source.kind == .error_page or std.mem.eql(u8, source.slug, page.slug)) continue;
-        if (try pageLinksTo(io, gpa, source, page.route)) {
-            try out.appendSlice(gpa, "    <li><a href=\"");
-            try appendHtmlEscaped(gpa, &out, source.route);
-            try out.appendSlice(gpa, "\">");
-            try appendHtmlEscaped(gpa, &out, source.title);
-            try out.appendSlice(gpa, "</a><span>");
-            try appendHtmlEscaped(gpa, &out, source.description);
-            try out.appendSlice(gpa, "</span></li>\n");
-            count += 1;
-        }
-    }
-
-    if (count == 0) {
-        try out.appendSlice(gpa, "    <li><span>No local backlinks yet.</span></li>\n");
-    }
-    try out.appendSlice(gpa, "  </ul>\n</section>\n");
-    return try out.toOwnedSlice(gpa);
+    var links: [pages.len + 4]model.LinkView = undefined;
+    const view = try backlinksView(io, gpa, page, &links);
+    return views.renderPageList(gpa, view);
 }
 
 fn renderSimilarFragment(gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    var links: [pages.len + 4]model.LinkView = undefined;
+    return views.renderPageList(gpa, similarView(page, &links));
+}
+
+fn renderConnectionsFragment(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
+    var related_links: [pages.len + 4]model.LinkView = undefined;
+    var backlink_links: [pages.len + 4]model.LinkView = undefined;
+    var similar_links: [pages.len + 4]model.LinkView = undefined;
+    return views.renderConnections(gpa, .{
+        .related = relatedView(page, &related_links),
+        .backlinks = try backlinksView(io, gpa, page, &backlink_links),
+        .similar = similarView(page, &similar_links),
+    });
+}
+
+fn syncGeneratedConnections(io: Io, gpa: std.mem.Allocator, write: bool) !usize {
+    var updated_or_failed: usize = 0;
+    for (pages) |page| {
+        if (page.kind != .article and page.kind != .prose) continue;
+
+        const html = try readStaticFile(io, gpa, page.file);
+        defer gpa.free(html);
+        const component = try renderConnectionsFragment(io, gpa, page);
+        defer gpa.free(component);
+        const composed = replaceGeneratedRegion(gpa, html, component) catch |err| {
+            std.debug.print("static/{s}: invalid generated-connections region ({s})\n", .{ page.file, @errorName(err) });
+            if (write) return err;
+            updated_or_failed += 1;
+            continue;
+        };
+        defer gpa.free(composed);
+
+        if (std.mem.eql(u8, html, composed)) continue;
+        if (write) {
+            const path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ static_dir_path, page.file });
+            defer gpa.free(path);
+            try Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = composed });
+        } else {
+            std.debug.print("static/{s}: generated connections are stale; run `zig build css`\n", .{page.file});
+        }
+        updated_or_failed += 1;
+    }
+    return updated_or_failed;
+}
+
+fn replaceGeneratedRegion(gpa: std.mem.Allocator, html: []const u8, component: []const u8) ![]u8 {
+    const start = std.mem.indexOf(u8, html, connections_region_start) orelse return error.MissingGeneratedRegion;
+    if (std.mem.indexOfPos(u8, html, start + connections_region_start.len, connections_region_start) != null) {
+        return error.DuplicateGeneratedRegion;
+    }
+    const content_start = start + connections_region_start.len;
+    const end = std.mem.indexOfPos(u8, html, content_start, connections_region_end) orelse return error.MissingGeneratedRegion;
+    if (std.mem.indexOfPos(u8, html, end + connections_region_end.len, connections_region_end) != null) {
+        return error.DuplicateGeneratedRegion;
+    }
+
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
+    try out.appendSlice(gpa, html[0..content_start]);
+    try out.append(gpa, '\n');
+    try out.appendSlice(gpa, component);
+    try out.appendSlice(gpa, html[end..]);
+    return out.toOwnedSlice(gpa);
+}
 
-    try out.appendSlice(gpa, "<section class=\"generated-section generated-similar\">\n");
-    try out.appendSlice(gpa, "  <h3>Similar</h3>\n");
-    try out.appendSlice(gpa, "  <p>Small tag-based suggestions from the local manifest.</p>\n");
-    try out.appendSlice(gpa, "  <ul>\n");
+fn relatedView(page: PageMeta, buffer: *[pages.len + 4]model.LinkView) model.PageListView {
+    var count: usize = 0;
+    for (page.related) |route| {
+        if (pageByRoute(route)) |target| {
+            buffer[count] = .{
+                .href = route,
+                .title = target.title,
+                .description = target.description,
+                .preview_key = shortHash(route),
+            };
+        } else {
+            buffer[count] = .{ .href = route, .title = route, .preview_key = shortHash(route) };
+        }
+        count += 1;
+    }
+    return .{
+        .kind = .related,
+        .heading = "Related",
+        .intro = "Pages explicitly connected to this page.",
+        .empty_text = "No related pages yet.",
+        .links = buffer[0..count],
+    };
+}
 
+fn backlinksView(
+    io: Io,
+    gpa: std.mem.Allocator,
+    page: PageMeta,
+    buffer: *[pages.len + 4]model.LinkView,
+) !model.PageListView {
+    var count: usize = 0;
+    for (pages) |source| {
+        if (source.kind == .error_page or std.mem.eql(u8, source.slug, page.slug)) continue;
+        if (!try pageLinksTo(io, gpa, source, page.route)) continue;
+        buffer[count] = .{
+            .href = source.route,
+            .title = source.title,
+            .description = source.description,
+            .preview_key = shortHash(source.route),
+        };
+        count += 1;
+    }
+    return .{
+        .kind = .backlinks,
+        .heading = "Backlinks",
+        .intro = "Local pages that link here.",
+        .empty_text = "No local backlinks yet.",
+        .links = buffer[0..count],
+    };
+}
+
+fn similarView(page: PageMeta, buffer: *[pages.len + 4]model.LinkView) model.PageListView {
     var count: usize = 0;
     for (pages) |candidate| {
         if (candidate.kind == .error_page or std.mem.eql(u8, candidate.slug, page.slug)) continue;
         if (similarityScore(page, candidate) == 0) continue;
-        try out.appendSlice(gpa, "    <li><a href=\"");
-        try appendHtmlEscaped(gpa, &out, candidate.route);
-        try out.appendSlice(gpa, "\">");
-        try appendHtmlEscaped(gpa, &out, candidate.title);
-        try out.appendSlice(gpa, "</a><span>");
-        try appendHtmlEscaped(gpa, &out, candidate.description);
-        try out.appendSlice(gpa, "</span></li>\n");
+        buffer[count] = .{
+            .href = candidate.route,
+            .title = candidate.title,
+            .description = candidate.description,
+            .preview_key = shortHash(candidate.route),
+        };
         count += 1;
     }
-
-    if (count == 0) {
-        try out.appendSlice(gpa, "    <li><span>No similar local pages yet.</span></li>\n");
-    }
-    try out.appendSlice(gpa, "  </ul>\n</section>\n");
-    return try out.toOwnedSlice(gpa);
-}
-
-fn renderConnectionsFragment(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
-    const related = try renderRelatedFragment(gpa, page);
-    defer gpa.free(related);
-    const backlinks = try renderBacklinksFragment(io, gpa, page);
-    defer gpa.free(backlinks);
-    const similar = try renderSimilarFragment(gpa, page);
-    defer gpa.free(similar);
-
-    var out: std.ArrayList(u8) = .empty;
-    errdefer out.deinit(gpa);
-    try out.appendSlice(gpa, "<div class=\"generated-connections\">\n");
-    try out.appendSlice(gpa, related);
-    try out.appendSlice(gpa, backlinks);
-    try out.appendSlice(gpa, similar);
-    try out.appendSlice(gpa, "</div>\n");
-    return try out.toOwnedSlice(gpa);
-}
-
-fn appendPageListSection(
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList(u8),
-    heading: []const u8,
-    intro: []const u8,
-    routes: []const []const u8,
-) !void {
-    try out.appendSlice(gpa, "<section class=\"generated-section generated-related\">\n");
-    try out.appendSlice(gpa, "  <h3>");
-    try appendHtmlEscaped(gpa, out, heading);
-    try out.appendSlice(gpa, "</h3>\n  <p>");
-    try appendHtmlEscaped(gpa, out, intro);
-    try out.appendSlice(gpa, "</p>\n  <ul>\n");
-    if (routes.len == 0) {
-        try out.appendSlice(gpa, "    <li><span>No related pages yet.</span></li>\n");
-    } else {
-        for (routes) |route| {
-            try out.appendSlice(gpa, "    <li><a href=\"");
-            try appendHtmlEscaped(gpa, out, route);
-            try out.appendSlice(gpa, "\">");
-            if (pageByRoute(route)) |target| {
-                try appendHtmlEscaped(gpa, out, target.title);
-                try out.appendSlice(gpa, "</a><span>");
-                try appendHtmlEscaped(gpa, out, target.description);
-                try out.appendSlice(gpa, "</span>");
-            } else {
-                try appendHtmlEscaped(gpa, out, route);
-                try out.appendSlice(gpa, "</a>");
-            }
-            try out.appendSlice(gpa, "</li>\n");
-        }
-    }
-    try out.appendSlice(gpa, "  </ul>\n</section>\n");
+    return .{
+        .kind = .similar,
+        .heading = "Similar",
+        .intro = "Small tag-based suggestions from the local manifest.",
+        .empty_text = "No similar local pages yet.",
+        .links = buffer[0..count],
+    };
 }
 
 fn similarityScore(a: PageMeta, b: PageMeta) usize {
@@ -1018,39 +986,32 @@ fn similarityScore(a: PageMeta, b: PageMeta) usize {
 }
 
 fn pageByRoute(route: []const u8) ?PageMeta {
-    const normalized = normalizedRoute(route);
-    for (pages) |page| {
-        if (std.mem.eql(u8, page.route, normalized)) return page;
-    }
-    return null;
+    return model.byRoute(route);
 }
 
 fn normalizedRoute(raw: []const u8) []const u8 {
-    var value = raw;
-    if (std.mem.indexOfAny(u8, value, "?#")) |index| value = value[0..index];
-    if (std.mem.endsWith(u8, value, ".html")) value = value[0 .. value.len - ".html".len];
-    if (std.mem.eql(u8, value, "/index")) return "/";
-    return value;
+    return model.normalizedRoute(raw);
 }
 
 fn pageLinksTo(io: Io, gpa: std.mem.Allocator, source: PageMeta, target_route: []const u8) !bool {
     const html = try readStaticFile(io, gpa, source.file);
     defer gpa.free(html);
     const main_html = extractElement(html, "main") orelse html;
+    const authored_html = beforeGeneratedContextSection(main_html);
 
     var search_pos: usize = 0;
-    while (std.mem.indexOfPos(u8, main_html, search_pos, "href=")) |href_pos| {
+    while (std.mem.indexOfPos(u8, authored_html, search_pos, "href=")) |href_pos| {
         const quote_pos = href_pos + "href=".len;
-        if (quote_pos >= main_html.len) break;
-        const quote = main_html[quote_pos];
+        if (quote_pos >= authored_html.len) break;
+        const quote = authored_html[quote_pos];
         if (quote != '"' and quote != '\'') {
             search_pos = quote_pos + 1;
             continue;
         }
 
         const value_start = quote_pos + 1;
-        const value_end = std.mem.indexOfScalarPos(u8, main_html, value_start, quote) orelse return error.InvalidHtml;
-        const raw = main_html[value_start..value_end];
+        const value_end = std.mem.indexOfScalarPos(u8, authored_html, value_start, quote) orelse return error.InvalidHtml;
+        const raw = authored_html[value_start..value_end];
         if (std.mem.eql(u8, normalizedRoute(raw), target_route)) return true;
         search_pos = value_end + 1;
     }
@@ -1077,38 +1038,330 @@ fn extractElement(html: []const u8, tag_name: []const u8) ?[]const u8 {
 }
 
 fn appendHtmlEscaped(gpa: std.mem.Allocator, out: *std.ArrayList(u8), value: []const u8) !void {
-    for (value) |char| {
-        switch (char) {
-            '&' => try out.appendSlice(gpa, "&amp;"),
-            '<' => try out.appendSlice(gpa, "&lt;"),
-            '>' => try out.appendSlice(gpa, "&gt;"),
-            '"' => try out.appendSlice(gpa, "&quot;"),
-            '\'' => try out.appendSlice(gpa, "&#39;"),
-            else => try out.append(gpa, char),
+    return views.appendHtmlEscaped(gpa, out, value);
+}
+
+fn collectAnnotations(io: Io, arena: std.mem.Allocator) ![]model.Annotation {
+    var link_context = try loadLinkContextCache(io, arena);
+    var annotations: std.ArrayList(model.Annotation) = .empty;
+    var seen = std.StringHashMap(void).init(arena);
+
+    for (pages) |page| {
+        if (page.kind == .error_page) continue;
+        const html = try readStaticFile(io, arena, page.file);
+        const main_html = extractElement(html, "main") orelse html;
+        const authored_html = beforeGeneratedContextSection(main_html);
+
+        var search_pos: usize = 0;
+        while (std.mem.indexOfPos(u8, authored_html, search_pos, "<a")) |anchor_start| {
+            if (isInsideHtmlComment(authored_html, anchor_start)) {
+                search_pos = anchor_start + "<a".len;
+                continue;
+            }
+            const tag_end = std.mem.indexOfScalarPos(u8, authored_html, anchor_start, '>') orelse break;
+            const close = findClosingTag(authored_html, tag_end + 1, "a") orelse break;
+            const tag = authored_html[anchor_start..tag_end];
+            if (std.mem.indexOf(u8, tag, "heading-anchor") != null) {
+                search_pos = close.end;
+                continue;
+            }
+            const href = attributeValue(tag, "href") orelse {
+                search_pos = close.end;
+                continue;
+            };
+            if (href.len == 0 or href[0] == '#' or std.mem.startsWith(u8, href, "mailto:") or seen.contains(href)) {
+                search_pos = close.end;
+                continue;
+            }
+
+            const text = try htmlText(arena, authored_html[tag_end + 1 .. close.start]);
+            const trimmed_text = std.mem.trim(u8, text, " \t\r\n");
+            if (trimmed_text.len == 0) {
+                search_pos = close.end;
+                continue;
+            }
+
+            try seen.put(href, {});
+            try annotations.append(arena, try buildAnnotation(
+                io,
+                arena,
+                page,
+                href,
+                trimmed_text,
+                if (link_context) |*parsed| &parsed.value else null,
+            ));
+            search_pos = close.end;
+        }
+    }
+    return annotations.toOwnedSlice(arena);
+}
+
+fn buildAnnotation(
+    io: Io,
+    arena: std.mem.Allocator,
+    source_page: PageMeta,
+    href: []const u8,
+    text: []const u8,
+    link_context: ?*const std.json.Value,
+) !model.Annotation {
+    const kind = linkKind(href);
+    var annotation: model.Annotation = .{
+        .href = href,
+        .text = text,
+        .kind = kind,
+        .source = source_page.route,
+        .source_title = source_page.title,
+        .title = text,
+        .summary = "Static asset or local route.",
+    };
+
+    if (pageByRoute(href)) |target| {
+        annotation.title = target.title;
+        annotation.summary = try internalPageSummary(io, arena, target);
+        const preview_html = try internalPagePreviewHtml(io, arena, target);
+        if (std.mem.trim(u8, preview_html, " \t\r\n").len != 0) annotation.preview_html = preview_html;
+        annotation.date = target.date;
+        annotation.site_name = "plosca.ru";
+        annotation.context_kind = switch (target.kind) {
+            .article, .prose => "article",
+            else => "internal",
+        };
+        return annotation;
+    }
+
+    if (std.mem.eql(u8, kind, "external")) {
+        const context = if (link_context) |root| findLinkContext(root, href) else null;
+        const context_status = if (context) |value| jsonStringField(value.*, "status") else null;
+        const usable_context = if (context_status) |status|
+            std.mem.eql(u8, status, "ok") or std.mem.eql(u8, status, "manual")
+        else
+            false;
+        annotation.title = if (usable_context and context != null)
+            firstNonEmpty(&.{ jsonStringField(context.?.*, "title"), @as(?[]const u8, text) }) orelse text
+        else
+            text;
+        annotation.site_name = if (context) |value|
+            firstNonEmpty(&.{ jsonStringField(value.*, "site_name"), displayHost(href) })
+        else
+            displayHost(href);
+        annotation.context_kind = if (context) |value| jsonStringField(value.*, "kind") else null;
+        const context_summary = if (usable_context and context != null)
+            firstNonEmpty(&.{ jsonStringField(context.?.*, "summary"), null })
+        else
+            null;
+        if (context_summary) |summary| {
+            annotation.summary = summary;
+            if (annotation.context_kind) |context_kind| {
+                if (std.mem.eql(u8, context_kind, "wikipedia")) {
+                    const preview_html = try wikipediaSummaryPreviewHtml(arena, summary);
+                    if (std.mem.trim(u8, preview_html, " \t\r\n").len != 0) annotation.preview_html = preview_html;
+                }
+            }
+        } else {
+            annotation.summary = try std.fmt.allocPrint(arena, "External link to {s}.", .{annotation.site_name orelse "another site"});
+        }
+        if (context) |value| annotation.canonical_url = jsonStringField(value.*, "canonical_url");
+        annotation.archive = try archivePath(arena, href);
+        return annotation;
+    }
+
+    if (std.mem.eql(u8, kind, "pdf") and std.mem.eql(u8, href, resume_pdf_href)) {
+        const preview = try resumePdfPreviewInfo(io, arena);
+        annotation.title = "Resume PDF";
+        annotation.summary = "One-page resume PDF for Mircea Ilie Ploscaru, focused on full-stack development, data engineering, BI, and automation.";
+        annotation.site_name = "plosca.ru";
+        annotation.context_kind = "pdf";
+        annotation.file_size = preview.file_size;
+        if (try fileExists(io, arena, preview.path)) {
+            const dimensions = try readJpegDimensions(io, arena, preview.path);
+            annotation.preview_image = preview.href;
+            annotation.preview_width = dimensions.width;
+            annotation.preview_height = dimensions.height;
+        }
+    }
+    return annotation;
+}
+
+fn writePreviewFragments(io: Io, gpa: std.mem.Allocator, annotations: []const model.Annotation) !usize {
+    try deleteGeneratedPreviewHtml(io);
+    var keys = std.StringHashMap([]const u8).init(gpa);
+    defer {
+        var it = keys.iterator();
+        while (it.next()) |entry| gpa.free(entry.key_ptr.*);
+        keys.deinit();
+    }
+
+    for (annotations) |annotation| {
+        const key = shortHash(annotation.href);
+        if (keys.get(key[0..])) |existing_href| {
+            if (!std.mem.eql(u8, existing_href, annotation.href)) return error.PreviewHashCollision;
+        } else {
+            try keys.put(try gpa.dupe(u8, key[0..]), annotation.href);
+        }
+
+        const fragment = try views.renderPreview(gpa, annotation);
+        defer gpa.free(fragment);
+        const path = try previewFilePath(gpa, annotation.href);
+        defer gpa.free(path);
+        try Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = fragment });
+    }
+    return annotations.len;
+}
+
+fn deleteGeneratedPreviewHtml(io: Io) !void {
+    var dir = try Io.Dir.cwd().openDir(io, previews_dir_path, .{ .iterate = true });
+    defer dir.close(io);
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".html")) {
+            try dir.deleteFile(io, entry.name);
         }
     }
 }
 
-fn renderAnnotationsJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
-    var link_context = try loadLinkContextCache(io, gpa);
-    defer if (link_context) |*parsed| parsed.deinit();
+fn checkPreviewFragments(io: Io, gpa: std.mem.Allocator) !usize {
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    const annotations = try collectAnnotations(io, arena.allocator());
+    var expected = std.StringHashMap(void).init(gpa);
+    defer {
+        var expected_it = expected.iterator();
+        while (expected_it.next()) |entry| gpa.free(entry.key_ptr.*);
+        expected.deinit();
+    }
+
+    var failures: usize = 0;
+    for (annotations) |annotation| {
+        const key = shortHash(annotation.href);
+        if (expected.contains(key[0..])) {
+            std.debug.print("preview key collision for {s}\n", .{annotation.href});
+            failures += 1;
+            continue;
+        }
+        try expected.put(try gpa.dupe(u8, key[0..]), {});
+
+        const path = try previewFilePath(gpa, annotation.href);
+        defer gpa.free(path);
+        const fragment = try views.renderPreview(gpa, annotation);
+        defer gpa.free(fragment);
+        failures += try checkGeneratedFileContents(io, gpa, path, fragment);
+    }
+
+    var dir = try Io.Dir.cwd().openDir(io, previews_dir_path, .{ .iterate = true });
+    defer dir.close(io);
+    var it = dir.iterate();
+    while (try it.next(io)) |entry| {
+        if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".html")) continue;
+        const key = entry.name[0 .. entry.name.len - ".html".len];
+        if (expected.contains(key)) continue;
+        std.debug.print("{s}/{s}: orphaned preview; run `zig build css`\n", .{ previews_dir_path, entry.name });
+        failures += 1;
+    }
+    return failures;
+}
+
+fn previewFilePath(gpa: std.mem.Allocator, href: []const u8) ![]u8 {
+    const key = shortHash(href);
+    return std.fmt.allocPrint(gpa, "{s}/{s}.html", .{ previews_dir_path, key[0..] });
+}
+
+fn previewHref(gpa: std.mem.Allocator, href: []const u8) ![]u8 {
+    const key = shortHash(href);
+    return std.fmt.allocPrint(gpa, "/metadata/previews/{s}.html", .{key[0..]});
+}
+
+fn syncPreviewMarkup(io: Io, gpa: std.mem.Allocator, write: bool) !usize {
+    var arena: std.heap.ArenaAllocator = .init(gpa);
+    defer arena.deinit();
+    const annotations = try collectAnnotations(io, arena.allocator());
+
+    var updated_or_failed: usize = 0;
+    for (pages) |page| {
+        const html = try readStaticFile(io, gpa, page.file);
+        defer gpa.free(html);
+        const rewritten = try rewritePreviewMarkup(gpa, html, annotations);
+        defer gpa.free(rewritten);
+        if (std.mem.eql(u8, html, rewritten)) continue;
+
+        if (write) {
+            const path = try std.fmt.allocPrint(gpa, "{s}/{s}", .{ static_dir_path, page.file });
+            defer gpa.free(path);
+            try Io.Dir.cwd().writeFile(io, .{ .sub_path = path, .data = rewritten });
+        } else {
+            std.debug.print("static/{s}: preview markup is stale; run `zig build css`\n", .{page.file});
+        }
+        updated_or_failed += 1;
+    }
+    return updated_or_failed;
+}
+
+fn rewritePreviewMarkup(
+    gpa: std.mem.Allocator,
+    html: []const u8,
+    annotations: []const model.Annotation,
+) ![]u8 {
+    const main_start = std.mem.indexOf(u8, html, "<main") orelse return addPreviewTarget(gpa, html);
+    const main_open_end = std.mem.indexOfScalarPos(u8, html, main_start, '>') orelse return error.InvalidHtml;
+    const main_end = std.mem.indexOfPos(u8, html, main_open_end + 1, "</main>") orelse return error.InvalidHtml;
 
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
-    var seen: std.ArrayList([]u8) = .empty;
-    defer freeStringList(gpa, &seen);
+    var cursor: usize = 0;
+    var search_pos = main_open_end + 1;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<a")) |anchor_start| {
+        if (anchor_start >= main_end) break;
+        const tag_end = std.mem.indexOfScalarPos(u8, html, anchor_start, '>') orelse return error.InvalidHtml;
+        if (tag_end >= main_end) break;
+        const tag = html[anchor_start..tag_end];
+        const href = attributeValue(tag, "href") orelse {
+            search_pos = tag_end + 1;
+            continue;
+        };
+        if (std.mem.indexOf(u8, tag, "heading-anchor") != null or
+            std.mem.indexOf(u8, tag, "up-btn") != null or
+            annotationByHref(annotations, href) == null)
+        {
+            search_pos = tag_end + 1;
+            continue;
+        }
 
-    try out.appendSlice(gpa, "{\n  \"annotations\": [\n");
-    var count: usize = 0;
-    for (pages) |page| {
-        if (page.kind == .error_page) continue;
-        const html = try readStaticFile(io, gpa, page.file);
-        defer gpa.free(html);
-        const main_html = extractElement(html, "main") orelse html;
-        try appendAnnotationsFromHtml(io, gpa, &out, &seen, page, main_html, &count, if (link_context) |*parsed| &parsed.value else null);
+        const generated_start = std.mem.indexOf(u8, tag, " data-previewable=") orelse tag.len;
+        const fragment_href = try previewHref(gpa, href);
+        defer gpa.free(fragment_href);
+        try out.appendSlice(gpa, html[cursor..anchor_start]);
+        try out.appendSlice(gpa, tag[0..generated_start]);
+        try out.appendSlice(gpa, " data-previewable=\"true\" hx-get=\"");
+        try appendHtmlEscaped(gpa, &out, fragment_href);
+        try out.appendSlice(gpa, "\" hx-trigger=\"preview:request\" hx-target=\"#link-preview\" hx-swap=\"outerSync\" hx-sync=\"#link-preview:replace\">");
+        cursor = tag_end + 1;
+        search_pos = tag_end + 1;
     }
-    try out.appendSlice(gpa, "\n  ]\n}\n");
-    return try out.toOwnedSlice(gpa);
+    try out.appendSlice(gpa, html[cursor..]);
+    const decorated = try out.toOwnedSlice(gpa);
+    defer gpa.free(decorated);
+    return addPreviewTarget(gpa, decorated);
+}
+
+fn annotationByHref(annotations: []const model.Annotation, href: []const u8) ?model.Annotation {
+    for (annotations) |annotation| {
+        if (std.mem.eql(u8, annotation.href, href)) return annotation;
+    }
+    return null;
+}
+
+fn addPreviewTarget(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    const target = "<aside id=\"link-preview\" class=\"link-preview\" role=\"status\" hidden></aside>";
+    if (std.mem.count(u8, html, "id=\"link-preview\"") == 1) return gpa.dupe(u8, html);
+    if (std.mem.count(u8, html, "id=\"link-preview\"") > 1) return error.DuplicatePreviewTarget;
+    const body_end = std.mem.lastIndexOf(u8, html, "</body>") orelse return error.InvalidHtml;
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    try out.appendSlice(gpa, html[0..body_end]);
+    try out.appendSlice(gpa, target);
+    try out.append(gpa, '\n');
+    try out.appendSlice(gpa, html[body_end..]);
+    return out.toOwnedSlice(gpa);
 }
 
 fn renderExternalLinksJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
@@ -1132,122 +1385,6 @@ fn renderExternalLinksJson(io: Io, gpa: std.mem.Allocator) ![]u8 {
     }
     try out.appendSlice(gpa, "\n  ]\n}\n");
     return try out.toOwnedSlice(gpa);
-}
-
-fn appendAnnotationsFromHtml(
-    io: Io,
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList(u8),
-    seen: *std.ArrayList([]u8),
-    page: PageMeta,
-    html: []const u8,
-    count: *usize,
-    link_context: ?*const std.json.Value,
-) !void {
-    var search_pos: usize = 0;
-    while (std.mem.indexOfPos(u8, html, search_pos, "<a")) |anchor_start| {
-        if (isInsideHtmlComment(html, anchor_start)) {
-            search_pos = anchor_start + "<a".len;
-            continue;
-        }
-        const tag_end = std.mem.indexOfScalarPos(u8, html, anchor_start, '>') orelse break;
-        const close = findClosingTag(html, tag_end + 1, "a") orelse break;
-        const tag = html[anchor_start..tag_end];
-        if (std.mem.indexOf(u8, tag, "heading-anchor") != null) {
-            search_pos = close.end;
-            continue;
-        }
-        const href = attributeValue(tag, "href") orelse {
-            search_pos = close.end;
-            continue;
-        };
-        if (href.len == 0 or href[0] == '#' or std.mem.startsWith(u8, href, "mailto:")) {
-            search_pos = close.end;
-            continue;
-        }
-        if (containsString(seen.items, href)) {
-            search_pos = close.end;
-            continue;
-        }
-
-        const text = try htmlText(gpa, html[tag_end + 1 .. close.start]);
-        defer gpa.free(text);
-        if (std.mem.trim(u8, text, " \t\r\n").len == 0) {
-            search_pos = close.end;
-            continue;
-        }
-
-        try seen.append(gpa, try gpa.dupe(u8, href));
-        if (count.* != 0) try out.appendSlice(gpa, ",\n");
-        try appendAnnotationObject(io, gpa, out, page, href, text, link_context);
-        count.* += 1;
-        search_pos = close.end;
-    }
-}
-
-fn appendAnnotationObject(
-    io: Io,
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList(u8),
-    source_page: PageMeta,
-    href: []const u8,
-    text: []const u8,
-    link_context: ?*const std.json.Value,
-) !void {
-    const kind = linkKind(href);
-    const trimmed_text = std.mem.trim(u8, text, " \t\r\n");
-    try out.appendSlice(gpa, "    {\n");
-    try appendJsonField(gpa, out, "href", href, true);
-    try appendJsonField(gpa, out, "text", trimmed_text, true);
-    try appendJsonField(gpa, out, "kind", kind, true);
-    try appendJsonField(gpa, out, "source", source_page.route, true);
-    try appendJsonField(gpa, out, "source_title", source_page.title, true);
-    if (pageByRoute(href)) |target| {
-        const summary = try internalPageSummary(io, gpa, target);
-        defer gpa.free(summary);
-        const preview_html = try internalPagePreviewHtml(io, gpa, target);
-        defer gpa.free(preview_html);
-        const context_kind = switch (target.kind) {
-            .article, .prose => "article",
-            else => "internal",
-        };
-        try appendJsonField(gpa, out, "title", target.title, true);
-        try appendJsonField(gpa, out, "summary", summary, true);
-        if (std.mem.trim(u8, preview_html, " \t\r\n").len != 0) {
-            try appendJsonField(gpa, out, "preview_html", preview_html, true);
-        }
-        if (target.date) |date| try appendJsonField(gpa, out, "date", date, true);
-        try appendJsonField(gpa, out, "site_name", "plosca.ru", true);
-        try appendJsonField(gpa, out, "context_kind", context_kind, false);
-    } else if (std.mem.eql(u8, kind, "external")) {
-        try appendExternalAnnotation(gpa, out, href, trimmed_text, link_context);
-    } else if (std.mem.eql(u8, kind, "pdf") and std.mem.eql(u8, href, resume_pdf_href)) {
-        try appendResumePdfAnnotation(io, gpa, out);
-    } else {
-        try appendJsonField(gpa, out, "title", trimmed_text, true);
-        try appendJsonField(gpa, out, "summary", "Static asset or local route.", false);
-    }
-    try out.appendSlice(gpa, "    }");
-}
-
-fn appendResumePdfAnnotation(io: Io, gpa: std.mem.Allocator, out: *std.ArrayList(u8)) !void {
-    const preview = try resumePdfPreviewInfo(io, gpa);
-    defer preview.deinit(gpa);
-
-    try appendJsonField(gpa, out, "title", "Resume PDF", true);
-    try appendJsonField(gpa, out, "summary", "One-page resume PDF for Mircea Ilie Ploscaru, focused on full-stack development, data engineering, BI, and automation.", true);
-    try appendJsonField(gpa, out, "site_name", "plosca.ru", true);
-    try appendJsonField(gpa, out, "context_kind", "pdf", true);
-
-    if (try fileExists(io, gpa, preview.path)) {
-        const dimensions = try readJpegDimensions(io, gpa, preview.path);
-        try appendJsonNumberField(gpa, out, "file_size", preview.file_size, true);
-        try appendJsonField(gpa, out, "preview_image", preview.href, true);
-        try appendJsonNumberField(gpa, out, "preview_width", dimensions.width, true);
-        try appendJsonNumberField(gpa, out, "preview_height", dimensions.height, false);
-    } else {
-        try appendJsonNumberField(gpa, out, "file_size", preview.file_size, false);
-    }
 }
 
 fn internalPagePreviewHtml(io: Io, gpa: std.mem.Allocator, page: PageMeta) ![]u8 {
@@ -1276,15 +1413,17 @@ fn articleBlockPreviewHtml(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
         const block = html[block_start..close.end];
         const cleaned = try stripPreviewChrome(gpa, block);
         defer gpa.free(cleaned);
-        const text = try htmlText(gpa, cleaned);
+        const passive = try stripGeneratedPreviewAttributes(gpa, cleaned);
+        defer gpa.free(passive);
+        const text = try htmlText(gpa, passive);
         defer gpa.free(text);
         if (std.mem.trim(u8, text, " \t\r\n").len == 0) {
             search_pos = close.end;
             continue;
         }
 
-        if (out.items.len + cleaned.len > preview_html_limit and out.items.len != 0) break;
-        try out.appendSlice(gpa, cleaned);
+        if (out.items.len + passive.len > preview_html_limit and out.items.len != 0) break;
+        try out.appendSlice(gpa, passive);
         try out.append(gpa, '\n');
         block_count += 1;
         search_pos = close.end;
@@ -1292,6 +1431,28 @@ fn articleBlockPreviewHtml(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
     }
 
     return try out.toOwnedSlice(gpa);
+}
+
+fn stripGeneratedPreviewAttributes(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(gpa);
+    var cursor: usize = 0;
+    var search_pos: usize = 0;
+    while (std.mem.indexOfPos(u8, html, search_pos, "<a")) |anchor_start| {
+        const tag_end = std.mem.indexOfScalarPos(u8, html, anchor_start, '>') orelse break;
+        const tag = html[anchor_start..tag_end];
+        const generated_start = std.mem.indexOf(u8, tag, " data-previewable=") orelse {
+            search_pos = tag_end + 1;
+            continue;
+        };
+        try out.appendSlice(gpa, html[cursor..anchor_start]);
+        try out.appendSlice(gpa, tag[0..generated_start]);
+        try out.append(gpa, '>');
+        cursor = tag_end + 1;
+        search_pos = tag_end + 1;
+    }
+    try out.appendSlice(gpa, html[cursor..]);
+    return out.toOwnedSlice(gpa);
 }
 
 fn stripPreviewChrome(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
@@ -1365,6 +1526,13 @@ fn beforeGeneratedArticleSections(html: []const u8) []const u8 {
     return body;
 }
 
+fn beforeGeneratedContextSection(html: []const u8) []const u8 {
+    if (std.mem.indexOf(u8, html, "<section class=\"article-generated\"")) |section_start| {
+        return html[0..section_start];
+    }
+    return html;
+}
+
 fn articleParagraphPreviewText(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
     var out: std.ArrayList(u8) = .empty;
     errdefer out.deinit(gpa);
@@ -1391,63 +1559,6 @@ fn articleParagraphPreviewText(gpa: std.mem.Allocator, html: []const u8) ![]u8 {
     }
 
     return try out.toOwnedSlice(gpa);
-}
-
-fn appendExternalAnnotation(
-    gpa: std.mem.Allocator,
-    out: *std.ArrayList(u8),
-    href: []const u8,
-    fallback_title: []const u8,
-    link_context: ?*const std.json.Value,
-) !void {
-    const archive_path = try archivePath(gpa, href);
-    defer gpa.free(archive_path);
-
-    const context = if (link_context) |root| findLinkContext(root, href) else null;
-    const context_status = if (context) |value| jsonStringField(value.*, "status") else null;
-    const usable_context = if (context_status) |status|
-        std.mem.eql(u8, status, "ok") or std.mem.eql(u8, status, "manual")
-    else
-        false;
-    const title = if (usable_context and context != null)
-        firstNonEmpty(&.{ jsonStringField(context.?.*, "title"), @as(?[]const u8, fallback_title) })
-    else
-        fallback_title;
-    const summary = if (usable_context and context != null)
-        firstNonEmpty(&.{ jsonStringField(context.?.*, "summary"), null })
-    else
-        null;
-    const site_name = if (context) |value|
-        firstNonEmpty(&.{ jsonStringField(value.*, "site_name"), displayHost(href) })
-    else
-        displayHost(href);
-    const context_kind = if (context) |value| jsonStringField(value.*, "kind") else null;
-
-    try appendJsonField(gpa, out, "title", title orelse fallback_title, true);
-    if (summary) |value| {
-        try appendJsonField(gpa, out, "summary", value, true);
-        if (context_kind) |kind| {
-            if (std.mem.eql(u8, kind, "wikipedia")) {
-                const preview_html = try wikipediaSummaryPreviewHtml(gpa, value);
-                defer gpa.free(preview_html);
-                if (std.mem.trim(u8, preview_html, " \t\r\n").len != 0) {
-                    try appendJsonField(gpa, out, "preview_html", preview_html, true);
-                }
-            }
-        }
-    } else {
-        const fallback = try std.fmt.allocPrint(gpa, "External link to {s}.", .{site_name orelse "another site"});
-        defer gpa.free(fallback);
-        try appendJsonField(gpa, out, "summary", fallback, true);
-    }
-    if (site_name) |value| try appendJsonField(gpa, out, "site_name", value, true);
-    if (context_kind) |value| try appendJsonField(gpa, out, "context_kind", value, true);
-    if (context) |value| {
-        if (jsonStringField(value.*, "canonical_url")) |canonical| {
-            try appendJsonField(gpa, out, "canonical_url", canonical, true);
-        }
-    }
-    try appendJsonField(gpa, out, "archive", archive_path, false);
 }
 
 fn wikipediaSummaryPreviewHtml(gpa: std.mem.Allocator, summary: []const u8) ![]u8 {
@@ -1550,18 +1661,19 @@ fn collectExternalLinks(io: Io, gpa: std.mem.Allocator, urls: *std.ArrayList([]u
         const html = try readStaticFile(io, gpa, page.file);
         defer gpa.free(html);
         const main_html = extractElement(html, "main") orelse html;
+        const authored_html = beforeGeneratedContextSection(main_html);
         var search_pos: usize = 0;
-        while (std.mem.indexOfPos(u8, main_html, search_pos, "href=")) |href_pos| {
+        while (std.mem.indexOfPos(u8, authored_html, search_pos, "href=")) |href_pos| {
             const quote_pos = href_pos + "href=".len;
-            if (quote_pos >= main_html.len) break;
-            const quote = main_html[quote_pos];
+            if (quote_pos >= authored_html.len) break;
+            const quote = authored_html[quote_pos];
             if (quote != '"' and quote != '\'') {
                 search_pos = quote_pos + 1;
                 continue;
             }
             const value_start = quote_pos + 1;
-            const value_end = std.mem.indexOfScalarPos(u8, main_html, value_start, quote) orelse return error.InvalidHtml;
-            const href = main_html[value_start..value_end];
+            const value_end = std.mem.indexOfScalarPos(u8, authored_html, value_start, quote) orelse return error.InvalidHtml;
+            const href = authored_html[value_start..value_end];
             if ((std.mem.startsWith(u8, href, "http://") or std.mem.startsWith(u8, href, "https://")) and !containsString(urls.items, href)) {
                 try urls.append(gpa, try gpa.dupe(u8, href));
             }
@@ -2066,10 +2178,19 @@ fn percentEncode(gpa: std.mem.Allocator, value: []const u8, mode: PercentEncodeM
 
 fn looksLikeHtml(body: []const u8) bool {
     const prefix = body[0..@min(body.len, 4096)];
-    return std.ascii.indexOfIgnoreCase(prefix, "<html") != null or
-        std.ascii.indexOfIgnoreCase(prefix, "<!doctype html") != null or
-        std.ascii.indexOfIgnoreCase(prefix, "<meta") != null or
-        std.ascii.indexOfIgnoreCase(prefix, "<title") != null;
+    return indexOfIgnoreCase(prefix, "<html") != null or
+        indexOfIgnoreCase(prefix, "<!doctype html") != null or
+        indexOfIgnoreCase(prefix, "<meta") != null or
+        indexOfIgnoreCase(prefix, "<title") != null;
+}
+
+fn indexOfIgnoreCase(haystack: []const u8, needle: []const u8) ?usize {
+    if (needle.len == 0 or haystack.len < needle.len) return null;
+    var index: usize = 0;
+    while (index + needle.len <= haystack.len) : (index += 1) {
+        if (std.ascii.eqlIgnoreCase(haystack[index .. index + needle.len], needle)) return index;
+    }
+    return null;
 }
 
 fn findMetaContentByNameOrProperty(html: []const u8, attr: []const u8, expected: []const u8) ?[]const u8 {
@@ -2554,6 +2675,14 @@ fn syncHtmlAssetRefs(io: Io, gpa: std.mem.Allocator, versions: AssetVersions, wr
                 std.debug.print("static/{s}: no theme.js script found\n", .{entry.name});
                 updated_or_failed += 1;
             }
+            if (result.preview_controller_refs == 0) {
+                std.debug.print("static/{s}: no preview-controller.js script found\n", .{entry.name});
+                updated_or_failed += 1;
+            }
+            if (result.htmx_refs == 0) {
+                std.debug.print("static/{s}: no htmx script found\n", .{entry.name});
+                updated_or_failed += 1;
+            }
             if (result.mismatches != 0) {
                 std.debug.print("static/{s}: first-party asset refs are not synchronized; run `zig build css`\n", .{entry.name});
                 updated_or_failed += result.mismatches;
@@ -2568,7 +2697,8 @@ const RewriteResult = struct {
     html: []u8,
     style_refs: usize,
     theme_refs: usize,
-    site_features_refs: usize,
+    preview_controller_refs: usize,
+    htmx_refs: usize,
     mismatches: usize,
 };
 
@@ -2583,23 +2713,29 @@ fn rewriteAssetRefs(gpa: std.mem.Allocator, html: []const u8, versions: AssetVer
     defer gpa.free(stylesheet);
     const theme = try std.fmt.allocPrint(gpa, "/theme.js?v={s}", .{versions.theme[0..]});
     defer gpa.free(theme);
-    const site_features = try std.fmt.allocPrint(gpa, "/site-features.js?v={s}", .{versions.site_features[0..]});
-    defer gpa.free(site_features);
+    const preview_controller = try std.fmt.allocPrint(gpa, "/preview-controller.js?v={s}", .{versions.preview_controller[0..]});
+    defer gpa.free(preview_controller);
+    const htmx = try std.fmt.allocPrint(gpa, "/vendor/htmx.min.js?v={s}", .{versions.htmx[0..]});
+    defer gpa.free(htmx);
 
     const style_result = try rewriteSingleAssetRef(gpa, html, "href=", "/style.css", stylesheet);
     errdefer gpa.free(style_result.html);
     const theme_result = try rewriteSingleAssetRef(gpa, style_result.html, "src=", "/theme.js", theme);
     gpa.free(style_result.html);
     errdefer gpa.free(theme_result.html);
-    const site_features_result = try rewriteSingleAssetRef(gpa, theme_result.html, "src=", "/site-features.js", site_features);
+    const preview_controller_result = try rewriteSingleAssetRef(gpa, theme_result.html, "src=", "/preview-controller.js", preview_controller);
     gpa.free(theme_result.html);
+    errdefer gpa.free(preview_controller_result.html);
+    const htmx_result = try rewriteSingleAssetRef(gpa, preview_controller_result.html, "src=", "/vendor/htmx.min.js", htmx);
+    gpa.free(preview_controller_result.html);
 
     return .{
-        .html = site_features_result.html,
+        .html = htmx_result.html,
         .style_refs = style_result.refs,
         .theme_refs = theme_result.refs,
-        .site_features_refs = site_features_result.refs,
-        .mismatches = style_result.mismatches + theme_result.mismatches + site_features_result.mismatches,
+        .preview_controller_refs = preview_controller_result.refs,
+        .htmx_refs = htmx_result.refs,
+        .mismatches = style_result.mismatches + theme_result.mismatches + preview_controller_result.mismatches + htmx_result.mismatches,
     };
 }
 
@@ -2682,9 +2818,44 @@ fn auditContent(io: Io, gpa: std.mem.Allocator) !usize {
         defer gpa.free(html);
 
         failures += auditPageMetadata(page, html);
+        failures += auditHtmxPolicy(page, html);
         failures += try auditPageIdsAndFragments(gpa, page, html);
         failures += auditHeadingAnchors(page, html);
         failures += auditAnchorText(page, html);
+    }
+    return failures;
+}
+
+fn auditHtmxPolicy(page: PageMeta, html: []const u8) usize {
+    const config = "<meta name=\"htmx-config\" content='{\"mode\":\"same-origin\",\"history\":false,\"noSwap\":[204,304,\"4xx\",\"5xx\"],\"defaultTimeout\":10000}'";
+    var failures: usize = 0;
+    if (std.mem.count(u8, html, config) != 1) {
+        std.debug.print("static/{s}: missing or duplicate strict htmx config\n", .{page.file});
+        failures += 1;
+    }
+    if (std.mem.count(u8, html, "src=\"/vendor/htmx.min.js?v=") != 1) {
+        std.debug.print("static/{s}: missing or duplicate local htmx runtime\n", .{page.file});
+        failures += 1;
+    }
+
+    const forbidden = [_][]const u8{
+        "hx-on",
+        "data-hx-on",
+        "hx-boost",
+        "data-hx-boost",
+        "hx-ext",
+        "data-hx-ext",
+        "hx-trigger=\"load",
+        "hx-trigger='load",
+        "js:",
+        "javascript:",
+        "cdn.jsdelivr.net/npm/htmx",
+        "unpkg.com/htmx",
+    };
+    for (forbidden) |needle| {
+        if (std.mem.indexOf(u8, html, needle) == null) continue;
+        std.debug.print("static/{s}: prohibited htmx/CSP construct \"{s}\"\n", .{ page.file, needle });
+        failures += 1;
     }
     return failures;
 }

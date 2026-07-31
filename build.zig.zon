@@ -1,0 +1,13 @@
+.{
+    .name = .plosca,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.17.0-dev.1509+bb296ab9b",
+    .paths = .{""},
+    .fingerprint = 0xa7b56ed876b5fbe6,
+    .dependencies = .{
+        .web = .{
+            .url = "git+https://github.com/tzekid/web.zig#1efd187533be1e23b5790a59236b97f0a68aef1a",
+            .hash = "web-0.1.0-dev-_XMZo6ryAABTebOdkSCrRgq4itq2Y1xA4ZHgvXV31jLX",
+        },
+    },
+}

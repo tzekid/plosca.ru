@@ -40,4 +40,23 @@ older poems and writing samples.
 About
 current profile, work focus, and contact links.
 Generated context
-View generated backlinks and similar pages.
+Related
+Pages explicitly connected to this page.
+Prose
+Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.
+About
+About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.
+Backlinks
+Local pages that link here.
+Ilie Ploscaru
+Personal site of Ilie Ploscaru, interested in psychology and tech.
+Prose
+Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.
+Similar
+Small tag-based suggestions from the local manifest.
+Ilie Ploscaru
+Personal site of Ilie Ploscaru, interested in psychology and tech.
+About
+About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.
+Prose
+Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.

@@ -53,4 +53,19 @@ a short note on how the site started.
 Home
 the small index of published writing.
 Generated context
-View generated backlinks and similar pages.
+Related
+Pages explicitly connected to this page.
+Hello World
+Hello World: first post by Ilie Ploscaru introducing the site and its themes.
+Ilie Ploscaru
+Personal site of Ilie Ploscaru, interested in psychology and tech.
+Backlinks
+Local pages that link here.
+Hello World
+Hello World: first post by Ilie Ploscaru introducing the site and its themes.
+Similar
+Small tag-based suggestions from the local manifest.
+Ilie Ploscaru
+Personal site of Ilie Ploscaru, interested in psychology and tech.
+Hello World
+Hello World: first post by Ilie Ploscaru introducing the site and its themes.

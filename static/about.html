@@ -50,8 +50,10 @@
             href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2"
             crossorigin
         />
+        <meta name="htmx-config" content='{"mode":"same-origin","history":false,"noSwap":[204,304,"4xx","5xx"],"defaultTimeout":10000}' />
         <script src="/theme.js?v=306685ff17d5f299"></script>
-        <script src="/site-features.js?v=3f1a4e97bf2bc26e" defer></script>
+        <script src="/vendor/htmx.min.js?v=28fae7bbe8e8142b" defer></script>
+        <script src="/preview-controller.js?v=25942084086ed242" defer></script>
         <link rel="stylesheet" href="/style.css?v=e817407975bdd28f" />
         <!-- about page specific styles moved to /style.css -->
     </head>
@@ -109,7 +111,7 @@
                 <p class="author">Full‑Stack Developer &amp; Data Engineer</p>
 
                 <p class="header-cta">
-                    <a href="/resume.pdf"> Download Resume (PDF) </a>
+                    <a href="/resume.pdf" data-previewable="true" hx-get="/metadata/previews/81cabc3bf46ab648.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace"> Download Resume (PDF) </a>
                 </p>
             </header>
 
@@ -261,15 +263,15 @@
                             <a
                                 href="https://www.linkedin.com/in/mircea-ilie-ploscaru/"
                                 class="btn-secondary"
-                                >LinkedIn</a
+                                 data-previewable="true" hx-get="/metadata/previews/2000405390f6a649.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">LinkedIn</a
                             >
                             <a
                                 href="https://github.com/tzekid"
                                 class="btn-secondary"
-                                >GitHub</a
+                                 data-previewable="true" hx-get="/metadata/previews/37527e48396d210f.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">GitHub</a
                             >
                             <a href="/resume.pdf" class="btn-outline"
-                                >Resume PDF</a
+                                 data-previewable="true" hx-get="/metadata/previews/81cabc3bf46ab648.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Resume PDF</a
                             >
                         </div>
                     </div>
@@ -283,5 +285,6 @@
         </main>
 
     <script defer data-domain="plosca.ru" src="https://plausible.plosca.ru/js/script.file-downloads.hash.outbound-links.pageview-props.revenue.tagged-events.js"></script>
+<aside id="link-preview" class="link-preview" role="status" hidden></aside>
 </body>
 </html>

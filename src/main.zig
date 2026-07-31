@@ -1,4 +1,8 @@
 const std = @import("std");
+const http_cache = @import("site_http_cache");
+const web_assets = @import("web_assets");
+const web_security_headers = @import("web_security_headers");
+const web_server = @import("web_server");
 
 const Io = std.Io;
 const http = std.http;
@@ -7,9 +11,9 @@ const net = std.Io.net;
 const max_path_len = 1024;
 const max_headers = 20;
 
-const cache_html = "public, max-age=0, must-revalidate";
-const cache_immutable = "public, max-age=31536000, immutable";
-const cache_no_store = "no-store";
+const cache_html = http_cache.public_revalidate;
+const cache_immutable = http_cache.immutable;
+const cache_no_store = http_cache.no_store;
 
 const csp =
     "default-src 'self'; base-uri 'none'; font-src 'self'; img-src 'self' data:; " ++
@@ -27,6 +31,11 @@ const Config = struct {
 const AppState = struct {
     static_dir: Io.Dir,
     hsts_max_age: ?u64,
+};
+
+const RequestContext = struct {
+    io: Io,
+    state: AppState,
 };
 
 const Encoding = enum {
@@ -184,22 +193,24 @@ fn handleConnection(io: Io, stream_arg: net.Stream, state: AppState) Io.Cancelab
     var send_buffer: [8192]u8 = undefined;
     var reader = stream.reader(io, &recv_buffer);
     var writer = stream.writer(io, &send_buffer);
-    var server: http.Server = .init(&reader.interface, &writer.interface);
+    web_server.serveConnection(
+        RequestContext,
+        .{ .io = io, .state = state },
+        &reader.interface,
+        &writer.interface,
+        .{},
+        dispatchRequest,
+    ) catch |err| {
+        std.log.warn("connection failed: {s}", .{@errorName(err)});
+    };
+}
 
-    while (true) {
-        var request = server.receiveHead() catch |err| switch (err) {
-            error.HttpConnectionClosing => return,
-            else => |e| {
-                std.log.warn("bad request: {s}", .{@errorName(e)});
-                return;
-            },
-        };
-        serveRequest(&request, io, state) catch |err| {
-            std.log.warn("request failed: {s}", .{@errorName(err)});
-            respondText(&request, state, .internal_server_error, "internal server error", false) catch {};
-            return;
-        };
-    }
+fn dispatchRequest(context: RequestContext, request: *http.Server.Request) !void {
+    serveRequest(request, context.io, context.state) catch |err| {
+        std.log.warn("request failed: {s}", .{@errorName(err)});
+        respondText(request, context.state, .internal_server_error, "internal server error", true) catch {};
+        return err;
+    };
 }
 
 fn serveRequest(request: *http.Server.Request, io: Io, state: AppState) !void {
@@ -242,11 +253,14 @@ fn respondStaticFile(
 
     const cache_control = if (status == .not_found) cache_no_store else cacheControlFor(resolved.logical_path);
     var etag_buf: [34]u8 = undefined;
-    const etag = makeEtag(resolved.logical_path, resolved.encoding, resolved.stat.size, resolved.stat.mtime.nanoseconds, &etag_buf);
+    const etag = http_cache.makeStaticEtag(resolved.logical_path, resolved.encoding.suffix(), resolved.stat.size, resolved.stat.mtime.nanoseconds, &etag_buf);
 
-    var last_modified_buf: [29]u8 = undefined;
     const mtime_seconds = timestampSeconds(resolved.stat.mtime);
-    const last_modified = formatHttpDate(mtime_seconds, &last_modified_buf) catch "Thu, 01 Jan 1970 00:00:00 GMT";
+    var last_modified_date: ?http_cache.HttpDate = http_cache.HttpDate.fromUnix(@intCast(mtime_seconds)) catch null;
+    const last_modified = if (last_modified_date) |*date|
+        date.slice()
+    else
+        "Thu, 01 Jan 1970 00:00:00 GMT";
 
     if (status == .ok and requestIsFresh(request, etag, mtime_seconds)) {
         return respondNotModified(request, state, cache_control, etag, last_modified, resolved.encoding);
@@ -341,15 +355,18 @@ fn respondMethodNotAllowed(request: *http.Server.Request, state: AppState) !void
 }
 
 fn addSecurityHeaders(headers: *HeaderBuilder, hsts_max_age: ?u64, hsts_buf: *[64]u8) !void {
-    headers.add("content-security-policy", csp);
-    headers.add("x-frame-options", "DENY");
-    headers.add("x-content-type-options", "nosniff");
-    headers.add("referrer-policy", "strict-origin-when-cross-origin");
-    headers.add("permissions-policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()");
+    const hsts = if (hsts_max_age) |max_age|
+        try std.fmt.bufPrint(hsts_buf, "max-age={d}; includeSubDomains", .{max_age})
+    else
+        null;
+    const shared = web_security_headers.build(.{
+        .content_security_policy = csp,
+        .permissions_policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        .strict_transport_security = hsts,
+        .secure_transport = hsts != null,
+    });
+    for (shared.slice()) |header| headers.add(header.name, header.value);
     headers.add("cross-origin-resource-policy", "same-origin");
-    if (hsts_max_age) |max_age| {
-        headers.add("strict-transport-security", try std.fmt.bufPrint(hsts_buf, "max-age={d}; includeSubDomains", .{max_age}));
-    }
 }
 
 fn resolveFile(
@@ -428,32 +445,14 @@ const NormalizeError = error{PathTooLong};
 
 fn normalizeRequestPath(target: []const u8, out: *[max_path_len]u8) NormalizeError!?[]const u8 {
     const path_only = stripQueryAndFragment(target);
-    const stripped = std.mem.trimStart(u8, path_only, "/");
-
-    var len: usize = 0;
-    var parts = std.mem.splitScalar(u8, stripped, '/');
-    while (parts.next()) |part| {
-        if (part.len == 0 or std.mem.eql(u8, part, ".")) continue;
-        if (std.mem.eql(u8, part, "..")) return null;
-        if (std.mem.indexOfScalar(u8, part, '\\') != null) return null;
-
-        if (len != 0) {
-            if (len >= out.len) return error.PathTooLong;
-            out[len] = '/';
-            len += 1;
-        }
-        if (part.len > out.len - len) return error.PathTooLong;
-        @memcpy(out[len..][0..part.len], part);
-        len += part.len;
-    }
-
-    if (len == 0) {
+    if (path_only.len > out.len + 1) return error.PathTooLong;
+    const relative = web_assets.relativePath(out, path_only) catch return null;
+    if (relative.len == 0) {
         const index = "index.html";
         @memcpy(out[0..index.len], index);
-        len = index.len;
+        return out[0..index.len];
     }
-
-    return out[0..len];
+    return relative;
 }
 
 fn stripQueryAndFragment(target: []const u8) []const u8 {
@@ -464,42 +463,11 @@ fn stripQueryAndFragment(target: []const u8) []const u8 {
 }
 
 fn contentTypeFor(path: []const u8) []const u8 {
-    const ext = std.fs.path.extension(path);
-    if (std.ascii.eqlIgnoreCase(ext, ".html")) return "text/html; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".css")) return "text/css; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".js")) return "application/javascript; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".json")) return "application/json; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".webmanifest")) return "application/manifest+json; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".xml")) return "application/xml; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".md")) return "text/markdown; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".txt")) return "text/plain; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".pdf")) return "application/pdf";
-    if (std.ascii.eqlIgnoreCase(ext, ".png")) return "image/png";
-    if (std.ascii.eqlIgnoreCase(ext, ".jpg") or std.ascii.eqlIgnoreCase(ext, ".jpeg")) return "image/jpeg";
-    if (std.ascii.eqlIgnoreCase(ext, ".gif")) return "image/gif";
-    if (std.ascii.eqlIgnoreCase(ext, ".svg")) return "image/svg+xml; charset=utf-8";
-    if (std.ascii.eqlIgnoreCase(ext, ".ico")) return "image/x-icon";
-    if (std.ascii.eqlIgnoreCase(ext, ".woff")) return "font/woff";
-    if (std.ascii.eqlIgnoreCase(ext, ".woff2")) return "font/woff2";
-    return "application/octet-stream";
+    return web_assets.contentType(path);
 }
 
 fn cacheControlFor(path: []const u8) []const u8 {
-    const ext = std.fs.path.extension(path);
-    if (std.ascii.eqlIgnoreCase(ext, ".html")) return cache_html;
-    if (std.ascii.eqlIgnoreCase(ext, ".md")) return cache_html;
-    if (std.ascii.eqlIgnoreCase(ext, ".txt")) return cache_html;
-    if (std.ascii.eqlIgnoreCase(ext, ".css")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".js")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".webmanifest")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".pdf")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".png")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".jpg") or std.ascii.eqlIgnoreCase(ext, ".jpeg")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".gif")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".svg")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".ico")) return cache_immutable;
-    if (std.ascii.eqlIgnoreCase(ext, ".woff") or std.ascii.eqlIgnoreCase(ext, ".woff2")) return cache_immutable;
-    return cache_html;
+    return http_cache.policyForStaticPath(path);
 }
 
 fn requestHeader(request: *const http.Server.Request, name: []const u8) ?[]const u8 {
@@ -554,7 +522,7 @@ fn parseAcceptEncoding(raw: []const u8) EncodingPreference {
 
 fn requestIsFresh(request: *const http.Server.Request, etag: []const u8, mtime_seconds: u64) bool {
     if (requestHeader(request, "if-none-match")) |value| {
-        return matchesIfNoneMatch(value, etag);
+        return http_cache.matchesIfNoneMatch(value, etag);
     }
     if (requestHeader(request, "if-modified-since")) |value| {
         if (parseHttpDate(value)) |since| {
@@ -564,59 +532,9 @@ fn requestIsFresh(request: *const http.Server.Request, etag: []const u8, mtime_s
     return false;
 }
 
-fn matchesIfNoneMatch(value: []const u8, etag: []const u8) bool {
-    var items = std.mem.splitScalar(u8, value, ',');
-    while (items.next()) |item| {
-        const candidate = std.mem.trim(u8, item, " \t");
-        if (std.mem.eql(u8, candidate, "*") or std.mem.eql(u8, candidate, etag)) return true;
-    }
-    return false;
-}
-
-fn makeEtag(path: []const u8, encoding: Encoding, size: u64, mtime_ns: i96, out: *[34]u8) []const u8 {
-    var hash = std.crypto.hash.sha2.Sha256.init(.{});
-    hash.update(path);
-    hash.update(encoding.suffix());
-    hash.update(std.mem.asBytes(&size));
-    hash.update(std.mem.asBytes(&mtime_ns));
-    var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
-    hash.final(&digest);
-
-    const hex = "0123456789abcdef";
-    out[0] = '"';
-    for (digest[0..16], 0..) |byte, index| {
-        out[1 + index * 2] = hex[byte >> 4];
-        out[2 + index * 2] = hex[byte & 0x0f];
-    }
-    out[33] = '"';
-    return out[0..34];
-}
-
 fn timestampSeconds(timestamp: Io.Timestamp) u64 {
     if (timestamp.nanoseconds <= 0) return 0;
     return @intCast(@divTrunc(timestamp.nanoseconds, @as(i96, std.time.ns_per_s)));
-}
-
-fn formatHttpDate(seconds: u64, out: *[29]u8) ![]const u8 {
-    const weekdays = [_][]const u8{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-    const months = [_][]const u8{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-    const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = seconds };
-    const epoch_day = epoch_seconds.getEpochDay();
-    const year_day = epoch_day.calculateYearDay();
-    const month_day = year_day.calculateMonthDay();
-    const day_seconds = epoch_seconds.getDaySeconds();
-    const weekday_index: usize = @intCast((epoch_day.day + 4) % 7);
-    const month_index: usize = @intFromEnum(month_day.month) - 1;
-
-    return std.fmt.bufPrint(out, "{s}, {d:0>2} {s} {d:0>4} {d:0>2}:{d:0>2}:{d:0>2} GMT", .{
-        weekdays[weekday_index],
-        month_day.day_index + 1,
-        months[month_index],
-        year_day.year,
-        day_seconds.getHoursIntoDay(),
-        day_seconds.getMinutesIntoHour(),
-        day_seconds.getSecondsIntoMinute(),
-    });
 }
 
 fn parseHttpDate(value_raw: []const u8) ?u64 {
@@ -660,7 +578,7 @@ fn dateToSeconds(date: HttpDate) u64 {
     }
     var month: u4 = 1;
     while (month < date.month) : (month += 1) {
-        seconds += @as(u64, std.time.epoch.getDaysInMonth(date.year, @enumFromInt(month))) * std.time.epoch.secs_per_day;
+        seconds += @as(u64, std.time.epoch.getDaysInMonth(date.year, @fromBackingInt(@intCast(month)))) * std.time.epoch.secs_per_day;
     }
     seconds += @as(u64, date.day - 1) * std.time.epoch.secs_per_day;
     seconds += @as(u64, date.hour) * 60 * 60;
@@ -701,7 +619,7 @@ test "content type and cache policy mapping" {
     try std.testing.expectEqualStrings("application/octet-stream", contentTypeFor("file.bin"));
     try std.testing.expectEqualStrings(cache_html, cacheControlFor("index.html"));
     try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("style.css"));
-    try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("site-features.js"));
+    try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("preview-controller.js"));
     try std.testing.expectEqualStrings(cache_immutable, cacheControlFor("resume.pdf"));
 }
 
@@ -714,16 +632,15 @@ test "accept encoding selection" {
 
 test "conditional request helpers" {
     var etag_buf: [34]u8 = undefined;
-    const etag = makeEtag("style.css", .identity, 123, 456, &etag_buf);
+    const etag = http_cache.makeStaticEtag("style.css", "", 123, 456, &etag_buf);
     var if_none_match_buf: [128]u8 = undefined;
     const if_none_match = try std.fmt.bufPrint(&if_none_match_buf, "\"nope\", \"not-it\", {s}", .{etag});
-    try std.testing.expect(matchesIfNoneMatch(if_none_match, etag));
-    try std.testing.expect(matchesIfNoneMatch("*", etag));
+    try std.testing.expect(http_cache.matchesIfNoneMatch(if_none_match, etag));
+    try std.testing.expect(http_cache.matchesIfNoneMatch("*", etag));
 
-    var date_buf: [29]u8 = undefined;
-    const formatted = try formatHttpDate(0, &date_buf);
-    try std.testing.expectEqualStrings("Thu, 01 Jan 1970 00:00:00 GMT", formatted);
-    try std.testing.expectEqual(@as(?u64, 0), parseHttpDate(formatted));
+    const date = try http_cache.HttpDate.fromUnix(0);
+    try std.testing.expectEqualStrings("Thu, 01 Jan 1970 00:00:00 GMT", date.slice());
+    try std.testing.expectEqual(@as(?u64, 0), parseHttpDate(date.slice()));
 }
 
 test "known local route references resolve to static files" {
@@ -733,6 +650,9 @@ test "known local route references resolve to static files" {
         "/hello_world",
         "/prose",
         "/style.css",
+        "/preview-controller.js",
+        "/vendor/htmx.min.js",
+        "/metadata/previews/3979d6c13901b2e1.html",
         "/PH1InQe0rvp_yN3TzIuyyQ.woff2",
         "/6xKtdSZaM9iE8KbpRA_hK1QN.woff2",
         "/site.webmanifest",

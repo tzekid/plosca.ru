@@ -3,12 +3,19 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const web = b.dependency("web", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    exe_mod.addImport("web_assets", web.module("web_assets"));
+    exe_mod.addImport("web_security_headers", web.module("web_security_headers"));
+    exe_mod.addImport("web_server", web.module("web_server"));
 
     const exe = b.addExecutable(.{
         .name = "webapp",
@@ -17,9 +24,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
     const run_step = b.step("run", "Run the static site server");
     run_step.dependOn(&run_cmd.step);
 
@@ -28,6 +33,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    test_mod.addImport("web_assets", web.module("web_assets"));
+    test_mod.addImport("web_security_headers", web.module("web_security_headers"));
+    test_mod.addImport("web_server", web.module("web_server"));
     const unit_tests = b.addTest(.{
         .root_module = test_mod,
     });
@@ -41,6 +49,38 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const site_model_mod = b.createModule(.{
+        .root_source_file = b.path("src/site/model.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const site_views_mod = b.createModule(.{
+        .root_source_file = b.path("src/site/views.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    site_views_mod.addImport("site_model", site_model_mod);
+    site_views_mod.addImport("web_html", web.module("web_html"));
+    const site_http_cache_mod = b.createModule(.{
+        .root_source_file = b.path("src/site/http_cache.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    site_http_cache_mod.addImport("web_cache", web.module("web_cache"));
+    exe_mod.addImport("site_http_cache", site_http_cache_mod);
+    test_mod.addImport("site_http_cache", site_http_cache_mod);
+    site_tool_mod.addImport("site_model", site_model_mod);
+    site_tool_mod.addImport("site_views", site_views_mod);
+    site_tool_mod.addImport("web_htmx", web.module("web_htmx"));
+    const site_view_tests = b.addTest(.{
+        .root_module = site_views_mod,
+    });
+    const run_site_view_tests = b.addRunArtifact(site_view_tests);
+    test_step.dependOn(&run_site_view_tests.step);
+    const site_http_cache_tests = b.addTest(.{
+        .root_module = site_http_cache_mod,
+    });
+    test_step.dependOn(&b.addRunArtifact(site_http_cache_tests).step);
     const site_tool = b.addExecutable(.{
         .name = "site-tool",
         .root_module = site_tool_mod,

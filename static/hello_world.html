@@ -34,8 +34,10 @@
 
         <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
         <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
+        <meta name="htmx-config" content='{"mode":"same-origin","history":false,"noSwap":[204,304,"4xx","5xx"],"defaultTimeout":10000}' />
         <script src="/theme.js?v=306685ff17d5f299"></script>
-        <script src="/site-features.js?v=3f1a4e97bf2bc26e" defer></script>
+        <script src="/vendor/htmx.min.js?v=28fae7bbe8e8142b" defer></script>
+        <script src="/preview-controller.js?v=25942084086ed242" defer></script>
         <link rel="alternate" type="text/markdown" href="/hello_world.md" />
         <link rel="alternate" type="text/plain" href="/hello_world.txt" />
         <link rel="stylesheet" href="/style.css?v=e817407975bdd28f" />
@@ -113,10 +115,10 @@
                 With free time on my hands these holidays I’ve decided that it
                 was about time to revamp my website. Learning to use an off the
                 shelf
-                <a href="https://www.staticgen.com/">static site generator</a>
+                <a href="https://www.staticgen.com/" data-previewable="true" hx-get="/metadata/previews/155fda74a6e1d682.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">static site generator</a>
                 looked daunting, so I’ve decided to
                 <a href="https://en.wikipedia.org/wiki/Reinventing_the_wheel"
-                    >build my own</a
+                     data-previewable="true" hx-get="/metadata/previews/e4888b8bd8657028.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">build my own</a
                 >™.
             </p>
             <h3 id="goals">Goals<a class="heading-anchor" href="#goals" aria-label="Link to this section">&lt;{ # }&gt;</a></h3>
@@ -134,10 +136,10 @@
                 After I’ve look at how other’s built their websites, I decided
                 to follow
                 <a href="https://en.wikipedia.org/wiki/KISS_principle"
-                    >K.I.S.S.</a
+                     data-previewable="true" hx-get="/metadata/previews/0540764735407c9c.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">K.I.S.S.</a
                 >
                 and mainly use
-                <a href="https://pandoc.org/demos.html"><code>pandoc</code></a
+                <a href="https://pandoc.org/demos.html" data-previewable="true" hx-get="/metadata/previews/b970deabe725255c.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace"><code>pandoc</code></a
                 >’s markdown to html generation as a starting point. And it was
                 awesome.
             </p>
@@ -160,7 +162,7 @@
             <p>
                 I should definetly learn to use grep/sed/awk for text search and
                 manipulation. Second lesson, which may be even more important is
-                <a href="https://youtu.be/bkgeFi4PwOg">streams</a> in bash
+                <a href="https://youtu.be/bkgeFi4PwOg" data-previewable="true" hx-get="/metadata/previews/139d5101e58c2a7b.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">streams</a> in bash
                 scripts. The time ‘compiling’ the whole site went from over 10
                 seconds to just about a second.
             </p>
@@ -174,7 +176,7 @@
             </div>
             <p>
                 The next thing I discovered was
-                <a href="http://eradman.com/entrproject/">entr</a>. It’s a tool
+                <a href="http://eradman.com/entrproject/" data-previewable="true" hx-get="/metadata/previews/476664c3bfc8078c.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">entr</a>. It’s a tool
                 that watches for file changes and performs commands you give it
                 when one occurs.
             </p>
@@ -195,7 +197,7 @@
                 including the reading time of each article after the title.
                 While implementing that I found
                 <a href="https://en.wikipedia.org/wiki/Wc_(Unix)"
-                    ><code>wc</code></a
+                     data-previewable="true" hx-get="/metadata/previews/d41b867a3dbbe912.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace"><code>wc</code></a
                 >, a tool that prints character, word, line &amp;c. count. Small
                 things like this make your life easier.
             </p>
@@ -215,21 +217,47 @@
                 <h2 id="related-links">Related<a class="heading-anchor" href="#related-links" aria-label="Link to this section">&lt;{ # }&gt;</a></h2>
                 <ul>
                     <li>
-                        <a href="/prose">Prose</a>
+                        <a href="/prose" data-previewable="true" hx-get="/metadata/previews/a6bd590850d15a9b.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Prose</a>
                         <span>older poems and writing samples.</span>
                     </li>
                     <li>
-                        <a href="/about">About</a>
+                        <a href="/about" data-previewable="true" hx-get="/metadata/previews/979bddc4a8caafdd.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">About</a>
                         <span>current profile, work focus, and contact links.</span>
                     </li>
                 </ul>
             </section>
             <section class="article-generated" aria-labelledby="generated-context">
                 <h2 id="generated-context">Generated context<a class="heading-anchor" href="#generated-context" aria-label="Link to this section">&lt;{ # }&gt;</a></h2>
-                <div class="transclusion" data-transclude="/metadata/connections/hello_world.html">
-                    <p>
-                        <a href="/metadata/connections/hello_world.html">View generated backlinks and similar pages.</a>
-                    </p>
+                <div class="transclusion">
+<!-- generated-connections:start -->
+<div class="generated-connections">
+<section class="generated-section generated-related">
+  <h3>Related</h3>
+  <p>Pages explicitly connected to this page.</p>
+  <ul>
+    <li><a href="/prose" data-previewable="true" hx-get="/metadata/previews/a6bd590850d15a9b.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Prose</a><span>Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.</span></li>
+    <li><a href="/about" data-previewable="true" hx-get="/metadata/previews/979bddc4a8caafdd.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">About</a><span>About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.</span></li>
+  </ul>
+</section>
+<section class="generated-section generated-backlinks">
+  <h3>Backlinks</h3>
+  <p>Local pages that link here.</p>
+  <ul>
+    <li><a href="/" data-previewable="true" hx-get="/metadata/previews/8a5edab282632443.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Ilie Ploscaru</a><span>Personal site of Ilie Ploscaru, interested in psychology and tech.</span></li>
+    <li><a href="/prose" data-previewable="true" hx-get="/metadata/previews/a6bd590850d15a9b.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Prose</a><span>Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.</span></li>
+  </ul>
+</section>
+<section class="generated-section generated-similar">
+  <h3>Similar</h3>
+  <p>Small tag-based suggestions from the local manifest.</p>
+  <ul>
+    <li><a href="/" data-previewable="true" hx-get="/metadata/previews/8a5edab282632443.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Ilie Ploscaru</a><span>Personal site of Ilie Ploscaru, interested in psychology and tech.</span></li>
+    <li><a href="/about" data-previewable="true" hx-get="/metadata/previews/979bddc4a8caafdd.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">About</a><span>About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.</span></li>
+    <li><a href="/prose" data-previewable="true" hx-get="/metadata/previews/a6bd590850d15a9b.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Prose</a><span>Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.</span></li>
+  </ul>
+</section>
+</div>
+<!-- generated-connections:end -->
                 </div>
             </section>
             <a class="up-btn" href="#top">&lt;{ ⇡ }&gt;</a>
@@ -237,5 +265,6 @@
         </main>
 
     <script defer data-domain="plosca.ru" src="https://plausible.plosca.ru/js/script.file-downloads.hash.outbound-links.pageview-props.revenue.tagged-events.js"></script>
+<aside id="link-preview" class="link-preview" role="status" hidden></aside>
 </body>
 </html>

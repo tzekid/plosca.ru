@@ -1,6 +1,8 @@
 ## plosca.ru
 
-Minimal Zig static file server for the files in `static/`.
+Static-first personal site with a Zig generator and file server. Generated
+connections are included in the initial HTML response; HTMX 4 progressively
+enhances on-demand link previews.
 
 ### Run
 
@@ -63,15 +65,32 @@ oha http://127.0.0.1:9327/
 wrk http://127.0.0.1:9327/style.css
 ```
 
-### Frontend CSS
+### Frontend and generation
 
-The frontend remains static HTML with no Node, npm, CSS framework, or browser-test dependency in the committed build path. Author CSS in `src/styles/site.css`, then generate the served stylesheet and update the `?v=` stylesheet query in static HTML files:
+The production site remains static HTML, CSS, and JavaScript with no Node
+runtime or CSS framework. `src/site/model.zig` defines typed page and preview
+models, while `src/site/views.zig` renders escaped components for both full
+pages and fragments. Author CSS in `src/styles/site.css`, then generate the
+served site:
 
 ```sh
 zig build css
 ```
 
-`zig build css` also regenerates committed `.br` and `.gz` siblings for text static assets so the Zig server can serve precompressed responses. To refresh only compressed siblings after manual static-file edits:
+`zig build css` materializes generated connections into article pages, emits
+preview fragments and HTMX attributes, updates content-versioned asset
+references, and regenerates committed `.br` and `.gz` siblings. HTMX is
+self-hosted under `static/vendor/`; `preview-controller.js` handles input,
+focus, visibility, and geometry only.
+
+Shared HTML escaping, URL validation, asset MIME detection, cache validators,
+security-header construction, the per-connection HTTP loop, and the HTMX pin
+come from `web.zig`. `build.zig.zon` locks that public library to an exact Git
+commit and Zig package hash. The matching source is committed under `zig-pkg/`;
+CI builds with `--system zig-pkg`, which disables network fetching and proves
+the repository-local copy is sufficient.
+
+To refresh only compressed siblings after manual static-file edits:
 
 ```sh
 zig build compress-assets
@@ -103,7 +122,7 @@ zig build css
 
 The enrichment step uses `curl` and the network. Normal CSS generation, site checks, tests, and deployment stay offline and use the committed cache.
 
-### Test
+### Verification
 
 ```sh
 zig build css
@@ -113,8 +132,6 @@ zig build -Doptimize=ReleaseFast
 ./scripts/smoke.sh
 ```
 
-To smoke an existing deployment instead of starting a temporary local server:
-
-```sh
-PLOSCA_BASE_URL=https://plosca.ru ./scripts/smoke.sh
-```
+CI runs the same generated-output, formatting, unit, release-build, and HTTP
+smoke gates. The smoke suite also proves that useful article context is present
+in the first HTML response without a startup HTMX request.

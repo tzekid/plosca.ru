@@ -31,8 +31,10 @@
     <link rel="preload" href="/style.css?v=e817407975bdd28f" as="style" />
     <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
+    <meta name="htmx-config" content='{"mode":"same-origin","history":false,"noSwap":[204,304,"4xx","5xx"],"defaultTimeout":10000}' />
     <script src="/theme.js?v=306685ff17d5f299"></script>
-    <script src="/site-features.js?v=3f1a4e97bf2bc26e" defer></script>
+    <script src="/vendor/htmx.min.js?v=28fae7bbe8e8142b" defer></script>
+    <script src="/preview-controller.js?v=25942084086ed242" defer></script>
     <link rel="stylesheet" href="/style.css?v=e817407975bdd28f" />
     </head>
     <body>
@@ -92,14 +94,15 @@
                     the useful places to recover from.
                 </p>
                 <nav class="error-links" aria-label="Recovery links">
-                    <a class="btn-primary" href="/">Home</a>
-                    <a class="btn-secondary" href="/about">About</a>
-                    <a class="btn-secondary" href="/hello_world">Hello World</a>
-                    <a class="btn-secondary" href="/prose">Prose</a>
+                    <a class="btn-primary" href="/" data-previewable="true" hx-get="/metadata/previews/8a5edab282632443.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Home</a>
+                    <a class="btn-secondary" href="/about" data-previewable="true" hx-get="/metadata/previews/979bddc4a8caafdd.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">About</a>
+                    <a class="btn-secondary" href="/hello_world" data-previewable="true" hx-get="/metadata/previews/3979d6c13901b2e1.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Hello World</a>
+                    <a class="btn-secondary" href="/prose" data-previewable="true" hx-get="/metadata/previews/a6bd590850d15a9b.html" hx-trigger="preview:request" hx-target="#link-preview" hx-swap="outerSync" hx-sync="#link-preview:replace">Prose</a>
                 </nav>
             </div>
         </main>
 
     <script defer data-domain="plosca.ru" src="https://plausible.plosca.ru/js/script.file-downloads.hash.outbound-links.pageview-props.revenue.tagged-events.js"></script>
+<aside id="link-preview" class="link-preview" role="status" hidden></aside>
 </body>
 </html>

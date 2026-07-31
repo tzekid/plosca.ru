@@ -13,13 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: sudo apt-get update && sudo apt-get install -y brotli
+      - id: zig
+        run: echo "version=$(tr -d '\n' < .zigversion)" >> "$GITHUB_OUTPUT"
       - uses: mlugg/setup-zig@v2.2.1
         with:
-          version: 0.16.0
-      - run: zig build css
-      - run: git diff --exit-code static
-      - run: zig build check-site
-      - run: zig fmt --check build.zig src/main.zig src/tools/site.zig
-      - run: zig build test
-      - run: zig build -Doptimize=ReleaseFast
+          version: ${{ steps.zig.outputs.version }}
+      - run: test "$(zig version)" = "$(tr -d '\n' < .zigversion)"
+      - run: zig build --system zig-pkg css
+      - run: git diff --exit-code -- static
+      - run: zig build --system zig-pkg check-site
+      - run: zig fmt --check build.zig build.zig.zon src
+      - run: zig build --system zig-pkg test
+      - run: zig build --system zig-pkg -Doptimize=ReleaseFast
       - run: ./scripts/smoke.sh
