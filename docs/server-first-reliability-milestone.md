@@ -1,6 +1,6 @@
 # Server-first reliability milestone
 
-Status: accepted for implementation
+Status: complete
 
 ## Outcome
 
