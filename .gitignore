@@ -34,3 +34,6 @@ nob
 .zig-cache/
 zig-out
 zig-out/
+
+# Local website design research (screenshots and case studies)
+/design-case-studies/
