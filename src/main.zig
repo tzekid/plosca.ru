@@ -16,9 +16,9 @@ const cache_immutable = http_cache.immutable;
 const cache_no_store = http_cache.no_store;
 
 const csp =
-    "default-src 'self'; base-uri 'none'; font-src 'self'; img-src 'self' data:; " ++
-    "script-src 'self' https://plausible.plosca.ru; style-src 'self'; " ++
-    "connect-src 'self' https://plausible.plosca.ru; object-src 'none'; " ++
+    "default-src 'self'; base-uri 'none'; font-src 'self'; img-src 'self' data: https://analytico.plosca.ru; " ++
+    "script-src 'self' https://analytico.plosca.ru; style-src 'self'; " ++
+    "connect-src 'self' https://analytico.plosca.ru; object-src 'none'; " ++
     "frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests";
 
 const Config = struct {
