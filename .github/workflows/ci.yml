@@ -24,5 +24,7 @@ jobs:
       - run: zig build --system zig-pkg check-site
       - run: zig fmt --check build.zig build.zig.zon src
       - run: zig build --system zig-pkg test
-      - run: zig build --system zig-pkg -Doptimize=ReleaseFast
+      - run: zig build --system zig-pkg -Doptimize=ReleaseSafe
       - run: ./scripts/smoke.sh
+      - run: ./tests/setup-browser-e2e.sh
+      - run: zig build --system zig-pkg browser-smoke

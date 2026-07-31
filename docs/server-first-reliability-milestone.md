@@ -36,16 +36,16 @@ existing shell and Zig tests as the fast default checks.
 
 ## Definition of done
 
-- [ ] HTTP smoke checks require the exact Analytico origin in every necessary
+- [x] HTTP smoke checks require the exact Analytico origin in every necessary
       CSP directive.
-- [ ] JavaScript-enabled Chromium loads the tracker fixture and records no CSP,
+- [x] JavaScript-enabled Chromium loads the tracker fixture and records no CSP,
       console, or page errors.
-- [ ] JavaScript-disabled Chromium requests the Analytico pixel and retains all
+- [x] JavaScript-disabled Chromium requests the Analytico pixel and retains all
       native navigation.
-- [ ] Preview A -> B -> A succeeds through real HTMX swaps and delegated event
+- [x] Preview A -> B -> A succeeds through real HTMX swaps and delegated event
       handling.
-- [ ] The enhanced first view performs no same-origin startup data request.
-- [ ] Generated-output, formatting, Debug, ReleaseSafe, and HTTP smoke gates
+- [x] The enhanced first view performs no same-origin startup data request.
+- [x] Generated-output, formatting, Debug, ReleaseSafe, and HTTP smoke gates
       pass.
 
 ## Explicitly deferred

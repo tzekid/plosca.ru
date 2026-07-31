@@ -126,7 +126,14 @@
         if (event.target === activeAnchor) hide();
     });
     document.addEventListener("htmx:finally:request", () => target()?.removeAttribute("aria-busy"));
-    window.addEventListener("scroll", hide, { passive: true });
-    window.addEventListener("resize", hide);
+    const viewportChanged = () => {
+        if (activeAnchor === document.activeElement) {
+            position();
+            return;
+        }
+        hide();
+    };
+    window.addEventListener("scroll", viewportChanged, { passive: true });
+    window.addEventListener("resize", viewportChanged);
     window.addEventListener("blur", hide);
 })();

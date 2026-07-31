@@ -44,6 +44,11 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);
 
+    const browser_smoke_cmd = b.addSystemCommand(&.{ "bash", "tests/browser-smoke.sh" });
+    browser_smoke_cmd.addArtifactArg(exe);
+    const browser_smoke_step = b.step("browser-smoke", "Run Chromium acceptance checks");
+    browser_smoke_step.dependOn(&browser_smoke_cmd.step);
+
     const site_tool_mod = b.createModule(.{
         .root_source_file = b.path("src/tools/site.zig"),
         .target = target,

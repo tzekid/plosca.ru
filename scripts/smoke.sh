@@ -123,4 +123,11 @@ if grep -Eqi "content-security-policy:.*unsafe-(inline|eval)" "$tmp_dir/headers"
   exit 1
 fi
 
+for directive in script-src connect-src img-src; do
+  if ! grep -Eqi "^content-security-policy:.*${directive}[^;]*https://analytico\.plosca\.ru([;[:space:]]|$)" "$tmp_dir/headers"; then
+    echo "CSP ${directive} does not allow https://analytico.plosca.ru" >&2
+    exit 1
+  fi
+done
+
 echo "smoke checks passed for $base"
