@@ -1,9 +1,19 @@
 (() => {
+    const showDelayMs = 300;
+    const hideDelayMs = 500;
     let activeAnchor = null;
+    let pendingAnchor = null;
+    let showTimer = null;
     let hideTimer = null;
     let keyboardInput = false;
     const coarsePointer = () => window.matchMedia?.("(hover: none), (pointer: coarse)").matches === true;
     const target = () => document.getElementById("link-preview");
+
+    const cancelShow = () => {
+        if (showTimer !== null) window.clearTimeout(showTimer);
+        showTimer = null;
+        pendingAnchor = null;
+    };
 
     const cancelHide = () => {
         if (hideTimer === null) return;
@@ -12,6 +22,7 @@
     };
 
     const hide = () => {
+        cancelShow();
         cancelHide();
         const previousAnchor = activeAnchor;
         activeAnchor = null;
@@ -27,11 +38,16 @@
 
     const scheduleHide = () => {
         cancelHide();
+        if (!activeAnchor) return;
         hideTimer = window.setTimeout(() => {
+            hideTimer = null;
             const box = target();
-            if (box?.matches(":hover") || box?.contains(document.activeElement)) return;
+            if (activeAnchor?.matches(":hover") ||
+                box?.matches(":hover") ||
+                activeAnchor === document.activeElement ||
+                box?.contains(document.activeElement)) return;
             hide();
-        }, 160);
+        }, hideDelayMs);
     };
 
     const position = () => {
@@ -57,24 +73,62 @@
     };
 
     const request = (anchor) => {
+        cancelShow();
         cancelHide();
         if (activeAnchor === anchor && !target()?.hidden) return;
+        if (activeAnchor && activeAnchor !== anchor) {
+            activeAnchor.dispatchEvent(new Event("htmx:abort"));
+        }
         activeAnchor = anchor;
         target()?.setAttribute("aria-busy", "true");
         anchor.dispatchEvent(new Event("preview:request"));
     };
 
+    const scheduleShow = (anchor) => {
+        cancelShow();
+        pendingAnchor = anchor;
+        showTimer = window.setTimeout(() => {
+            showTimer = null;
+            const candidate = pendingAnchor;
+            pendingAnchor = null;
+            if (candidate !== anchor || !anchor.isConnected || coarsePointer() || !anchor.matches(":hover")) return;
+            request(anchor);
+        }, showDelayMs);
+    };
+
     document.addEventListener("pointerover", (event) => {
         const element = event.target instanceof Element ? event.target : null;
+        if (element?.id === "link-preview" || element?.closest("#link-preview")) {
+            cancelHide();
+            return;
+        }
         const anchor = element?.closest("a[data-previewable]");
         if (!anchor || coarsePointer() || anchor.contains(event.relatedTarget)) return;
-        request(anchor);
+        if (anchor === activeAnchor) {
+            cancelHide();
+            return;
+        }
+        scheduleShow(anchor);
     });
 
     document.addEventListener("pointerout", (event) => {
         const element = event.target instanceof Element ? event.target : null;
+        const related = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+        const box = element?.id === "link-preview" ? element : element?.closest("#link-preview");
+        if (box) {
+            if (related && (box.contains(related) || activeAnchor?.contains(related))) return;
+            scheduleHide();
+            return;
+        }
         const anchor = element?.closest("a[data-previewable]");
-        if (anchor && anchor === activeAnchor && !anchor.contains(event.relatedTarget)) scheduleHide();
+        if (!anchor || (related && anchor.contains(related))) return;
+        if (anchor === pendingAnchor) cancelShow();
+        if (anchor !== activeAnchor) return;
+        if (related && target()?.contains(related)) {
+            cancelHide();
+            return;
+        }
+        scheduleHide();
     });
 
     document.addEventListener("focusin", (event) => {
@@ -84,11 +138,18 @@
             return;
         }
         const anchor = element?.closest("a[data-previewable]");
-        if (anchor && (!coarsePointer() || keyboardInput)) request(anchor);
+        if (anchor && keyboardInput) request(anchor);
     });
 
     document.addEventListener("focusout", (event) => {
-        if (event.target === activeAnchor && !target()?.contains(event.relatedTarget)) scheduleHide();
+        const element = event.target instanceof Element ? event.target : null;
+        const related = event.relatedTarget instanceof Node ? event.relatedTarget : null;
+        if (element?.id === "link-preview" || element?.closest("#link-preview")) {
+            if (related && (target()?.contains(related) || activeAnchor?.contains(related))) return;
+            scheduleHide();
+            return;
+        }
+        if (event.target === activeAnchor && !(related && target()?.contains(related))) scheduleHide();
     });
 
     document.addEventListener("keydown", (event) => {
@@ -97,6 +158,7 @@
     });
     document.addEventListener("pointerdown", (event) => {
         keyboardInput = false;
+        cancelShow();
         const element = event.target instanceof Element ? event.target : null;
         if (element?.closest(".link-preview__close")) {
             event.preventDefault();

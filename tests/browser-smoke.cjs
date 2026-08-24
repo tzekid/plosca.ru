@@ -103,6 +103,47 @@ async function checkEnhanced(browser) {
 
   const first = page.locator('a[data-previewable][href="/hello_world"]').first();
   const second = page.locator('a[data-previewable][href="/"]').first();
+  const target = page.locator("#link-preview");
+  const previewReadCount = () => sameOriginStartupReads.filter((url) =>
+    new URL(url).pathname.startsWith("/metadata/previews/")
+  ).length;
+
+  await first.hover();
+  await page.waitForTimeout(150);
+  await page.mouse.move(1, 1);
+  await page.waitForTimeout(350);
+  assert.equal(await target.isVisible(), false, "a brief flyover must not open a preview");
+  assert.equal(previewReadCount(), 0, "a brief flyover must not request preview metadata");
+
+  await second.focus();
+  await page.waitForTimeout(50);
+  assert.equal(await target.isVisible(), false, "non-keyboard focus must not bypass the pointer intent delay");
+
+  await first.hover();
+  await page.waitForTimeout(150);
+  assert.equal(await target.isVisible(), false, "the preview must respect the pointer intent delay");
+  const pointerPreview = page.locator('#link-preview[data-preview-href="/hello_world"]');
+  await pointerPreview.waitFor({ state: "visible" });
+
+  await pointerPreview.hover();
+  await page.waitForTimeout(650);
+  assert.equal(await pointerPreview.isVisible(), true, "moving from the source into the preview must keep it open");
+
+  await page.mouse.move(1, 1);
+  await page.waitForTimeout(250);
+  assert.equal(await pointerPreview.isVisible(), true, "the preview must survive the exit grace period");
+  await pointerPreview.waitFor({ state: "hidden" });
+
+  await first.hover();
+  await page.waitForTimeout(100);
+  await second.hover();
+  const switchedPreview = page.locator('#link-preview[data-preview-href="/"]');
+  await switchedPreview.waitFor({ state: "visible" });
+  assert.equal(await switchedPreview.isVisible(), true, "only the deliberately hovered link must open");
+
+  await page.mouse.click(1, 1);
+  assert.equal(await target.isVisible(), false, "clicking outside must dismiss the preview immediately");
+
   await page.keyboard.press("Tab");
   for (const [link, expected] of [[first, "/hello_world"], [second, "/"], [first, "/hello_world"]]) {
     await link.focus();
