@@ -35,7 +35,7 @@
         <meta name="msapplication-TileColor" content="#d64937" />
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="preload" href="/style.css?v=d7561abd506f3b0c" as="style" />
+        <link rel="preload" href="/style.css?v=85bfef24be5236a7" as="style" />
         <link
             rel="preload"
             as="font"
@@ -54,7 +54,7 @@
         <script src="/theme.js?v=306685ff17d5f299"></script>
         <script src="/vendor/htmx.min.js?v=28fae7bbe8e8142b" defer></script>
         <script src="/preview-controller.js?v=a97ea88dfc6446b9" defer></script>
-        <link rel="stylesheet" href="/style.css?v=d7561abd506f3b0c" />
+        <link rel="stylesheet" href="/style.css?v=85bfef24be5236a7" />
         <!-- about page specific styles moved to /style.css -->
     </head>
     <body>
@@ -174,73 +174,246 @@
                 </div>
             </section>
 
-            <section class="about-section fw-block">
+            <section class="about-section fw-block" id="experience">
                 <header class="about-section-head">
                     <h2>Experience</h2>
                 </header>
-                <div class="experience-resume">
-                    <div class="exp-role">
-                        <div class="exp-head">
-                            <span class="exp-title"
+                <div class="experience-timeline">
+                    <details class="timeline-item" name="experience">
+                        <summary class="timeline-summary">
+                            <span class="timeline-meta">
+                                <span class="timeline-dates">2025–present</span>
+                                <span class="timeline-company"
+                                    >committance AG</span
+                                >
+                            </span>
+                            <span class="timeline-node" aria-hidden="true"></span>
+                            <span class="timeline-title"
+                                >Full‑Stack Engineer / Data &amp; Cloud
+                                Consultant</span
+                            >
+                            <span
+                                class="timeline-chevron"
+                                aria-hidden="true"
+                            ></span>
+                        </summary>
+                        <div class="timeline-panel">
+                            <div class="timeline-panel-inner">
+                                <ul class="timeline-highlights">
+                                    <li>
+                                        Client projects across insurance,
+                                        railway technology and industrial data.
+                                    </li>
+                                    <li>
+                                        Go backend for configuring technically
+                                        complex measurement systems.
+                                    </li>
+                                    <li>
+                                        Azure and Databricks platform for sensor
+                                        validation and battery‑test
+                                        recommendations.
+                                    </li>
+                                    <li>
+                                        Multi‑tenant insurance platform with
+                                        Next.js, NestJS, MongoDB and AWS.
+                                    </li>
+                                </ul>
+                                <ul class="timeline-tags" aria-label="Technologies">
+                                    <li>Go</li>
+                                    <li>Azure</li>
+                                    <li>Databricks</li>
+                                    <li>AWS</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="timeline-item" name="experience" open>
+                        <summary class="timeline-summary">
+                            <span class="timeline-meta">
+                                <span class="timeline-dates">2021–2025</span>
+                                <span class="timeline-company"
+                                    >Northern Data AG</span
+                                >
+                            </span>
+                            <span class="timeline-node" aria-hidden="true"></span>
+                            <span class="timeline-title"
                                 >Full‑Stack Developer / BI Analyst / Data
                                 Engineer</span
                             >
-                            <span class="exp-dates">Dec 2021 – July 2025</span>
-                            <span class="exp-company">Northern Data AG</span>
+                            <span
+                                class="timeline-chevron"
+                                aria-hidden="true"
+                            ></span>
+                        </summary>
+                        <div class="timeline-panel">
+                            <div class="timeline-panel-inner">
+                                <ul class="timeline-highlights">
+                                    <li>
+                                        Built the Business Intelligence
+                                        function from scratch.
+                                    </li>
+                                    <li>
+                                        Grew an Azure data platform for
+                                        ingestion, ETL, warehouses, APIs and
+                                        dashboards.
+                                    </li>
+                                    <li>
+                                        Developed and operated the FastAPI
+                                        service people used to access company
+                                        data.
+                                    </li>
+                                    <li>
+                                        Built minute‑level analytics for
+                                        crypto‑mining operations.
+                                    </li>
+                                    <li>
+                                        Automated Bitcoin sales and modelled
+                                        Ethereum revenue before proof of stake.
+                                    </li>
+                                </ul>
+                                <ul class="timeline-tags" aria-label="Technologies">
+                                    <li>Data Eng</li>
+                                    <li>BI</li>
+                                    <li>Full‑Stack</li>
+                                    <li>Azure</li>
+                                    <li>FastAPI</li>
+                                </ul>
+                            </div>
                         </div>
-                        <ul class="exp-bullets">
-                            <li>
-                                Co‑founded / grew internal BI function; built
-                                scalable data & reporting pipelines.
-                            </li>
-                            <li>
-                                Designed & maintained full‑stack services
-                                supporting analytics & ML workflows.
-                            </li>
-                            <li>
-                                Implemented data quality & lineage
-                                instrumentation improving reliability &
-                                observability.
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="exp-role">
-                        <div class="exp-head">
-                            <span class="exp-title"
-                                >Data Scientist (Freelance)</span
+                    </details>
+
+                    <details class="timeline-item" name="experience">
+                        <summary class="timeline-summary">
+                            <span class="timeline-meta">
+                                <span class="timeline-dates">2025–present</span>
+                                <span class="timeline-company">Independent</span>
+                            </span>
+                            <span class="timeline-node" aria-hidden="true"></span>
+                            <span class="timeline-title"
+                                >Independent Product Work</span
                             >
-                            <span class="exp-dates"
-                                >May 2020 – Aug 2020; Jul 2021 – Sept 2021</span
+                            <span
+                                class="timeline-chevron"
+                                aria-hidden="true"
+                            ></span>
+                        </summary>
+                        <div class="timeline-panel">
+                            <div class="timeline-panel-inner">
+                                <ul class="timeline-highlights">
+                                    <li>
+                                        Sparkdate: a deliberately simple Go and
+                                        SQLite speed‑dating platform.
+                                    </li>
+                                    <li>
+                                        Owned the product loop from positioning
+                                        and onboarding to operations and
+                                        analytics.
+                                    </li>
+                                    <li>
+                                        FastAPI and React PWA media tool that
+                                        reduced a 20–30 second share flow to
+                                        7–10 seconds.
+                                    </li>
+                                </ul>
+                                <ul class="timeline-tags" aria-label="Technologies">
+                                    <li>Go</li>
+                                    <li>SQLite</li>
+                                    <li>FastAPI</li>
+                                    <li>React PWA</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="timeline-item" name="experience">
+                        <summary class="timeline-summary">
+                            <span class="timeline-meta">
+                                <span class="timeline-dates">2020–2021</span>
+                                <span class="timeline-company"
+                                    >Institute for Bee Research Frankfurt</span
+                                >
+                            </span>
+                            <span class="timeline-node" aria-hidden="true"></span>
+                            <span class="timeline-title"
+                                >Freelance Data Scientist</span
                             >
+                            <span
+                                class="timeline-chevron"
+                                aria-hidden="true"
+                            ></span>
+                        </summary>
+                        <div class="timeline-panel">
+                            <div class="timeline-panel-inner">
+                                <ul class="timeline-highlights">
+                                    <li>
+                                        Computer‑vision system for detecting and
+                                        counting Varroa mites in beehives.
+                                    </li>
+                                    <li>
+                                        Four cameras, image stitching,
+                                        TensorFlow/Keras and a Raspberry Pi with
+                                        a TPU accelerator.
+                                    </li>
+                                    <li>
+                                        Reduced a one‑to‑two minute measurement
+                                        to 12–18 seconds without sacrificing
+                                        accuracy.
+                                    </li>
+                                </ul>
+                                <ul class="timeline-tags" aria-label="Technologies">
+                                    <li>Computer Vision</li>
+                                    <li>TensorFlow</li>
+                                    <li>Raspberry Pi</li>
+                                    <li>TPU</li>
+                                </ul>
+                            </div>
                         </div>
-                        <ul class="exp-bullets">
-                            <li>
-                                Delivered ML prototypes (feature engineering,
-                                experimentation, evaluation).
-                            </li>
-                            <li>
-                                Produced analytical insights mapped to business
-                                KPIs.
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="exp-role">
-                        <div class="exp-head">
-                            <span class="exp-title">Software Engineer</span>
-                            <span class="exp-dates">Sept 2019 – Mar 2020</span>
-                            <span class="exp-company">Cloudflight</span>
+                    </details>
+
+                    <details class="timeline-item" name="experience">
+                        <summary class="timeline-summary">
+                            <span class="timeline-meta">
+                                <span class="timeline-dates">2019–2021</span>
+                                <span class="timeline-company"
+                                    >Consist · Cloudflight · SINETCON</span
+                                >
+                            </span>
+                            <span class="timeline-node" aria-hidden="true"></span>
+                            <span class="timeline-title"
+                                >Earlier Engineering Work</span
+                            >
+                            <span
+                                class="timeline-chevron"
+                                aria-hidden="true"
+                            ></span>
+                        </summary>
+                        <div class="timeline-panel">
+                            <div class="timeline-panel-inner">
+                                <ul class="timeline-highlights">
+                                    <li>
+                                        Jenkins CI/CD pipeline for Splunk
+                                        projects across AWS and VMware.
+                                    </li>
+                                    <li>
+                                        People and object detection for airport
+                                        gates at Cloudflight.
+                                    </li>
+                                    <li>
+                                        Third‑level support and an internal
+                                        recruiting and skills platform at
+                                        SINETCON.
+                                    </li>
+                                </ul>
+                                <ul class="timeline-tags" aria-label="Technologies">
+                                    <li>CI/CD</li>
+                                    <li>AWS</li>
+                                    <li>VMware</li>
+                                    <li>Laravel</li>
+                                </ul>
+                            </div>
                         </div>
-                        <ul class="exp-bullets">
-                            <li>
-                                Contributed backend & integration code across
-                                cross‑functional team.
-                            </li>
-                            <li>
-                                Supported delivery of production features &
-                                internal tooling improvements.
-                            </li>
-                        </ul>
-                    </div>
+                    </details>
                 </div>
             </section>
             <section class="about-section fw-block" id="connect">
