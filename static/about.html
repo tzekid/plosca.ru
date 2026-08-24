@@ -35,7 +35,7 @@
         <meta name="msapplication-TileColor" content="#d64937" />
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="preload" href="/style.css?v=f867b1f8556a027d" as="style" />
+        <link rel="preload" href="/style.css?v=4f04e8c09c5ca974" as="style" />
         <link
             rel="preload"
             as="font"
@@ -54,7 +54,7 @@
         <script src="/theme.js?v=306685ff17d5f299"></script>
         <script src="/vendor/htmx.min.js?v=28fae7bbe8e8142b" defer></script>
         <script src="/preview-controller.js?v=a97ea88dfc6446b9" defer></script>
-        <link rel="stylesheet" href="/style.css?v=f867b1f8556a027d" />
+        <link rel="stylesheet" href="/style.css?v=4f04e8c09c5ca974" />
         <!-- about page specific styles moved to /style.css -->
     </head>
     <body>
@@ -199,31 +199,57 @@
                         </summary>
                         <div class="timeline-panel">
                             <div class="timeline-panel-inner">
-                                <ul class="timeline-highlights">
-                                    <li>
-                                        Client projects across insurance,
-                                        railway technology and industrial data.
-                                    </li>
-                                    <li>
-                                        Go backend for configuring technically
-                                        complex measurement systems.
-                                    </li>
-                                    <li>
-                                        Azure and Databricks platform for sensor
-                                        validation and battery‑test
-                                        recommendations.
-                                    </li>
-                                    <li>
-                                        Multi‑tenant insurance platform with
-                                        Next.js, NestJS, MongoDB and AWS.
-                                    </li>
-                                </ul>
-                                <ul class="timeline-tags" aria-label="Technologies">
-                                    <li>Go</li>
-                                    <li>Azure</li>
-                                    <li>Databricks</li>
-                                    <li>AWS</li>
-                                </ul>
+                                <div class="timeline-projects">
+                                    <section class="timeline-project">
+                                        <h3>Measurement-system configurator</h3>
+                                        <p>
+                                            A Go application for a configuration
+                                            process with a lot of variants,
+                                            dependencies and rules. I work on
+                                            the domain logic, REST APIs and
+                                            SQLite layer, and automate the
+                                            recurring bits wherever it makes
+                                            sense.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Go · SQLite · REST
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>
+                                            Sensor validation &amp; battery tests
+                                        </h3>
+                                        <p>
+                                            A cloud MVP that turns raw IoT data
+                                            into validated results and
+                                            recommendations for the next battery
+                                            tests. I took it from workshops and
+                                            POCs to Azure / Databricks pipelines,
+                                            versioned rules and the logging and
+                                            tracing needed to tell how a result
+                                            came to be.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Azure · Databricks · Python · Go
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Insurance broker platform</h3>
+                                        <p>
+                                            A multi-tenant platform for broker
+                                            registration and partner-data
+                                            imports. I work across the Next.js /
+                                            NestJS flow, Cognito / OIDC, MongoDB
+                                            and the AWS import pipeline,
+                                            including the position-dependent
+                                            legacy CSV format and the checks
+                                            that make retries safe.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Next.js · NestJS · MongoDB · AWS
+                                        </p>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                     </details>
@@ -248,37 +274,129 @@
                         </summary>
                         <div class="timeline-panel">
                             <div class="timeline-panel-inner">
-                                <ul class="timeline-highlights">
-                                    <li>
-                                        Built the Business Intelligence
-                                        function from scratch.
-                                    </li>
-                                    <li>
-                                        Grew an Azure data platform for
-                                        ingestion, ETL, warehouses, APIs and
-                                        dashboards.
-                                    </li>
-                                    <li>
-                                        Developed and operated the FastAPI
-                                        service people used to access company
-                                        data.
-                                    </li>
-                                    <li>
-                                        Built minute‑level analytics for
-                                        crypto‑mining operations.
-                                    </li>
-                                    <li>
-                                        Automated Bitcoin sales and modelled
-                                        Ethereum revenue before proof of stake.
-                                    </li>
-                                </ul>
-                                <ul class="timeline-tags" aria-label="Technologies">
-                                    <li>Data Eng</li>
-                                    <li>BI</li>
-                                    <li>Full‑Stack</li>
-                                    <li>Azure</li>
-                                    <li>FastAPI</li>
-                                </ul>
+                                <p class="timeline-intro">
+                                    I co-founded the BI function with a colleague
+                                    and then built a fairly wide assortment of
+                                    things around it. These are the projects I
+                                    would actually tell you about.
+                                </p>
+                                <div class="timeline-projects">
+                                    <section class="timeline-project">
+                                        <h3>BI platform</h3>
+                                        <p>
+                                            The first version was PostgreSQL,
+                                            Python and cron on one VM. It grew
+                                            into the Azure data platform behind
+                                            our reporting, scraping, ETL and
+                                            dashboards.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Azure · Python · PostgreSQL · Prefect
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Company data API</h3>
+                                        <p>
+                                            A FastAPI service used from Excel by
+                                            Finance, Controlling and Treasury. I
+                                            designed and maintained it for more
+                                            than two years: auth, rate limits,
+                                            caching, background work, streaming,
+                                            monitoring and all the other
+                                            unglamorous things that keep an
+                                            internal API useful.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            FastAPI · OpenAPI · RBAC · Excel
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Mining analytics</h3>
+                                        <p>
+                                            Minute-level mining data came from
+                                            BigQuery, landed cheaply in Azure
+                                            Blob Storage and stayed queryable in
+                                            Snowflake. Python ETL and Power BI
+                                            did the rest.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            BigQuery · Azure · Snowflake · Power BI
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Bitcoin sales</h3>
+                                        <p>
+                                            A rule-based Coinbase Prime selling
+                                            script and a Teams bot for balances
+                                            and trades. The bot eventually lost
+                                            a fight with webhook deprecation;
+                                            the selling script kept doing its
+                                            job.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Python · Coinbase Prime · Teams
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Ethereum → Bitcoin</h3>
+                                        <p>
+                                            I read through the Ethereum source,
+                                            modelled the move to proof of stake
+                                            and turned it into a business
+                                            decision: move from ETH to BTC
+                                            mining while the hardware could
+                                            still be sold well. The timing put
+                                            the GPU sales 20–30% above later
+                                            market prices.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Python · Time series · PostgreSQL
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>SWIFT statement converter</h3>
+                                        <p>
+                                            The expensive in-house software
+                                            could not read some bank statements,
+                                            so I wrote a parser and a small
+                                            SvelteKit upload / download UI. POC
+                                            in a few hours, MVP in two days; it
+                                            stayed as the thing Finance used
+                                            when the expensive thing failed.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Python · SvelteKit · Excel
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Ask the database</h3>
+                                        <p>
+                                            Telegram in, SQL out: GPT and n8n
+                                            translated questions into queries
+                                            against a mirrored database and
+                                            returned text, CSV or Excel. A
+                                            deliberately bounded POC for PMO and
+                                            Operations.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            n8n · PostgreSQL · Telegram · GPT
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>HPC + CRM data</h3>
+                                        <p>
+                                            Connected Nautobot, GCP metrics,
+                                            HubSpot, on-prem HPC, Azure and
+                                            Databricks. The point was not
+                                            collecting cloud names; it was
+                                            linking sales data to what the
+                                            machines were actually doing.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Databricks · GCP · HubSpot · Grafana
+                                        </p>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                     </details>
@@ -300,28 +418,98 @@
                         </summary>
                         <div class="timeline-panel">
                             <div class="timeline-panel-inner">
-                                <ul class="timeline-highlights">
-                                    <li>
-                                        Sparkdate: a deliberately simple Go and
-                                        SQLite speed‑dating platform.
-                                    </li>
-                                    <li>
-                                        Owned the product loop from positioning
-                                        and onboarding to operations and
-                                        analytics.
-                                    </li>
-                                    <li>
-                                        FastAPI and React PWA media tool that
-                                        reduced a 20–30 second share flow to
-                                        7–10 seconds.
-                                    </li>
-                                </ul>
-                                <ul class="timeline-tags" aria-label="Technologies">
-                                    <li>Go</li>
-                                    <li>SQLite</li>
-                                    <li>FastAPI</li>
-                                    <li>React PWA</li>
-                                </ul>
+                                <p class="timeline-intro">
+                                    I broke my ankle, got bored and started
+                                    building the things I wanted to use. The
+                                    accidental sequence so far:
+                                </p>
+                                <div class="timeline-projects">
+                                    <section class="timeline-project">
+                                        <h3>turso.zig</h3>
+                                        <p>
+                                            I wanted to use Turso from Zig, so I
+                                            wrote the binding. It exposes the C
+                                            API when you need it and adds a safer
+                                            API for normal use; exact upstream
+                                            pins, runnable examples and ownership
+                                            rules included.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Zig · Turso · C ABI
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Analytico</h3>
+                                        <p>
+                                            A small, self-hosted analytics
+                                            engine for sites like this one. One
+                                            Zig process, embedded Turso + DuckDB,
+                                            useful HTML from the server, no
+                                            ClickHouse cluster or admin SPA
+                                            hiding behind the word “simple”.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Zig · Turso · DuckDB · HTMX
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Cloudio</h3>
+                                        <p>
+                                            The control plane I wanted for my
+                                            own VPS: routes, DNS, services,
+                                            containers, deploys, rollback and
+                                            audit history in one server-rendered
+                                            Zig application. It targets one
+                                            operator and one host on purpose.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Zig · SQLite · Caddy · Cloudflare
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Sparkdate</h3>
+                                        <p>
+                                            An event-commerce and operations
+                                            system for in-person speed dating.
+                                            Server-rendered Zig, embedded Turso,
+                                            native links and forms; JavaScript
+                                            only for the few things the browser
+                                            or Stripe genuinely has to do.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Zig · Turso · Stripe · HTML
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>web.zig</h3>
+                                        <p>
+                                            Small Zig libraries for the boring
+                                            web primitives I kept rewriting:
+                                            requests, responses, routing, HTML,
+                                            assets, caching and security headers.
+                                            Applications keep their own state and
+                                            choices; the library does not try to
+                                            become a framework.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Zig · HTTP · Server-rendered HTML
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Cross-platform media sharing</h3>
+                                        <p>
+                                            A small FastAPI / React PWA around
+                                            yt-dlp and ffmpeg, built because
+                                            getting a clip from a link into a
+                                            chat took too long. The full path
+                                            went from roughly 20–30 seconds to
+                                            7–10.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            FastAPI · React · yt-dlp · ffmpeg
+                                        </p>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                     </details>
@@ -345,28 +533,25 @@
                         </summary>
                         <div class="timeline-panel">
                             <div class="timeline-panel-inner">
-                                <ul class="timeline-highlights">
-                                    <li>
-                                        Computer‑vision system for detecting and
-                                        counting Varroa mites in beehives.
-                                    </li>
-                                    <li>
-                                        Four cameras, image stitching,
-                                        TensorFlow/Keras and a Raspberry Pi with
-                                        a TPU accelerator.
-                                    </li>
-                                    <li>
-                                        Reduced a one‑to‑two minute measurement
-                                        to 12–18 seconds without sacrificing
-                                        accuracy.
-                                    </li>
-                                </ul>
-                                <ul class="timeline-tags" aria-label="Technologies">
-                                    <li>Computer Vision</li>
-                                    <li>TensorFlow</li>
-                                    <li>Raspberry Pi</li>
-                                    <li>TPU</li>
-                                </ul>
+                                <div class="timeline-projects">
+                                    <section class="timeline-project">
+                                        <h3>Varroa detection</h3>
+                                        <p>
+                                            Four synchronized cameras, image
+                                            stitching and a TensorFlow / Keras
+                                            model running on a Raspberry Pi +
+                                            TPU. It turned a one-to-two minute
+                                            measurement into 12–18 seconds
+                                            without trading away accuracy; I
+                                            also supervised the labelling work
+                                            and checked the results with the
+                                            researchers.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Python · TensorFlow · Raspberry Pi · TPU
+                                        </p>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                     </details>
@@ -390,27 +575,48 @@
                         </summary>
                         <div class="timeline-panel">
                             <div class="timeline-panel-inner">
-                                <ul class="timeline-highlights">
-                                    <li>
-                                        Jenkins CI/CD pipeline for Splunk
-                                        projects across AWS and VMware.
-                                    </li>
-                                    <li>
-                                        People and object detection for airport
-                                        gates at Cloudflight.
-                                    </li>
-                                    <li>
-                                        Third‑level support and an internal
-                                        recruiting and skills platform at
-                                        SINETCON.
-                                    </li>
-                                </ul>
-                                <ul class="timeline-tags" aria-label="Technologies">
-                                    <li>CI/CD</li>
-                                    <li>AWS</li>
-                                    <li>VMware</li>
-                                    <li>Laravel</li>
-                                </ul>
+                                <div class="timeline-projects">
+                                    <section class="timeline-project">
+                                        <h3>Splunk CI/CD · Consist</h3>
+                                        <p>
+                                            A Jenkins pipeline for Splunk
+                                            projects across AWS and VMware, with
+                                            fresh-instance tests, documentation
+                                            and rollout to a three-person team.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Jenkins · Splunk · AWS · VMware
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Airport-gate vision · Cloudflight</h3>
+                                        <p>
+                                            TensorFlow / Keras people and object
+                                            detection on TPU hardware, plus the
+                                            Flask / MySQL / jQuery dashboard
+                                            around it. I worked across the model,
+                                            backend, frontend and data—the
+                                            full-stack habit started early.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            TensorFlow · Flask · MySQL · TPU
+                                        </p>
+                                    </section>
+                                    <section class="timeline-project">
+                                        <h3>Recruiting &amp; skills · SINETCON</h3>
+                                        <p>
+                                            An internal Laravel / PostgreSQL /
+                                            jQuery tool for recruiting, skills
+                                            and project matching, fed by
+                                            LinkedIn / Xing profile data. Built
+                                            while also doing third-level support
+                                            and leading a small hardware rollout.
+                                        </p>
+                                        <p class="timeline-project-stack">
+                                            Laravel · PostgreSQL · jQuery
+                                        </p>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                     </details>
