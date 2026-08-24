@@ -1319,6 +1319,7 @@ fn rewritePreviewMarkup(
         };
         if (std.mem.indexOf(u8, tag, "heading-anchor") != null or
             std.mem.indexOf(u8, tag, "up-btn") != null or
+            std.mem.indexOf(u8, tag, "data-preview-disabled") != null or
             annotationByHref(annotations, href) == null)
         {
             search_pos = tag_end + 1;
