@@ -1,8 +1,0 @@
-.{
-    .name = .plosca,
-    .version = "0.1.0",
-    .minimum_zig_version = "0.17.0-dev.1509+bb296ab9b",
-    .paths = .{""},
-    .fingerprint = 0xa7b56ed876b5fbe6,
-    .dependencies = .{},
-}

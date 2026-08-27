@@ -23,12 +23,7 @@ plosca.ru {
 		-Server
 	}
 
-	@immutable path_regexp immutable \.(?:css|js|woff2|png|jpg|pdf|webmanifest)$
-	header @immutable Cache-Control "public, max-age=31536000, immutable"
-	@revalidate {
-		not path_regexp revalidate_immutable \.(?:css|js|woff2|png|jpg|pdf|webmanifest)$
-	}
-	header @revalidate Cache-Control "public, no-cache"
+	header Cache-Control "public, no-cache"
 
 	handle /stargraph* {
 		reverse_proxy 127.0.0.1:8787

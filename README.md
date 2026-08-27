@@ -1,78 +1,51 @@
 # plosca.ru
 
-`plosca.ru` is authored as complete HTML documents plus static assets and a
-small typed Zig manifest. One offline Zig compiler produces an immutable
-`dist/`; Caddy serves that directory directly.
-
-There is no production application server, HTMX runtime, client framework,
-template language, or Node runtime.
-
-## Build
-
-The repository pins Zig in `.zigversion`.
-
-```sh
-zig build -Doptimize=ReleaseFast
-zig-out/bin/sitec build
-zig-out/bin/sitec check
-```
-
-The installed executable is `zig-out/bin/sitec` and intentionally exposes only
-two commands:
-
-```text
-sitec build
-sitec check
-```
-
-`sitec build` reads only repository files. It builds and validates
-`dist.tmp/`, then atomically publishes the completed tree as `dist/`. A failed
-build leaves the prior `dist/` untouched.
+`plosca.ru` is an authored static site. The checked-in `site/` directory is
+the complete deployable website; there is no build step, template language,
+application server, or generated output.
 
 ## Source layout
 
-- `content/pages/` contains the five authored full-document HTML pages.
-- `content/manifest.zig` contains page/site data using types from
-  `src/manifest.zig`.
-- `content/link-context.json` is the committed offline source for external-link
-  previews.
-- `assets/` contains the authoritative CSS, small vanilla-JS enhancements,
-  fonts, images, icons, PDF, alternates, metadata files, and archive records.
-- `src/` contains the product-specific compiler passes: graph, previews,
-  assets, rendering, and validation.
-- `tests/baseline/` freezes the pre-migration HTML, asset hashes, route
-  behavior, and desktop/mobile screenshots.
-- `dist/` is generated and ignored; never edit it manually.
+- `site/*.html` contains the five full-document pages.
+- `site/previews/` contains the authored link-preview fragments.
+- `site/archive/` contains the external-link registry and records.
+- The remaining files under `site/` are the CSS, small vanilla-JavaScript
+  enhancements, fonts, images, icons, PDF, and article alternates.
+- `deploy/plosca.caddy` is the production Caddy site definition.
+- `scripts/deploy.sh` publishes `site/` as an immutable release.
 
-The only HTML substitutions are explicit asset markers such as
-`{{asset:style.css}}` and the named generated-connections region. The compiler
-does not implement a general template language.
+Edit files under `site/` directly. Stable asset URLs are revalidated by Caddy,
+so asset hashing and generated version strings are unnecessary.
 
-## Verification
+## Browser acceptance
 
-```sh
-zig build test
-zig build deterministic-build -Doptimize=ReleaseFast
-zig build check-site -Doptimize=ReleaseFast
-```
-
-The focused browser acceptance test uses the system Caddy and Chromium. Its
-Node/Playwright dependency is test-only and is not used by a normal build or in
-production:
+Install the test-only browser dependency once:
 
 ```sh
 ./tests/setup-browser-e2e.sh
-zig build browser-smoke -Doptimize=ReleaseFast
 ```
 
-The browser gate covers theme persistence, the About timeline, native
-navigation with JavaScript disabled, PDF/404 behavior, preview intent timing,
-cache reuse, keyboard access, stale-request cancellation, and CSP behavior.
+Run the focused end-to-end acceptance test:
+
+```sh
+./tests/browser-acceptance.sh
+```
+
+It covers current routes, theme persistence, the About timeline, link-preview
+intent/cancellation/cache/keyboard behavior, code-block interaction, PDF and
+404 handling, analytics CSP behavior, and navigation with JavaScript disabled.
+Node and Playwright are test-only and are not used in production.
 
 ## Deployment
 
-`deploy/plosca.caddy` is the production Caddy site definition. Releases are
-immutable directories and `current` is an atomic symlink:
+Deploy the committed `site/` tree with:
+
+```sh
+./scripts/deploy.sh
+```
+
+The script copies the tree into a read-only release and atomically switches
+the `current` symlink:
 
 ```text
 /etc/caddy/conf.d/plosca-site/
@@ -80,12 +53,5 @@ immutable directories and `current` is an atomic symlink:
   releases/<commit>/
 ```
 
-Deploy a committed revision with:
-
-```sh
-./scripts/deploy.sh
-```
-
-Set `PLOSCA_RELEASE_ROOT` to use a different Caddy-readable release root. Set
-`PLOSCA_RELOAD_CADDY=1` when the installed Caddy configuration should be
-validated and reloaded after the symlink switch.
+Caddy follows the symlink on each request, so content deployments do not need
+a reload. Reload Caddy only after changing its configuration.

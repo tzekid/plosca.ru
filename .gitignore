@@ -1,41 +1,10 @@
-# OS/editor
 .DS_Store
 ._*
 .idea/
 .vscode/
 
-# Go build artifacts
-
-*.exe
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-coverage/
-target/
-
-# Logs
+.cache/
 *.log
-
-# Misc
-nginx.conf
-*.fiber.gz
 *.pid
-*.bak.*
-*.new
-dist/
-dist.tmp/
-dist.previous/
 
-ploscaru
-webapp
-nob
-
-.zig-cache
-.zig-cache/
-zig-out
-zig-out/
-
-# Local website design research (screenshots and case studies)
 /design-case-studies/
