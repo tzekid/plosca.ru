@@ -73,8 +73,8 @@ mv -Tf "$next_link" "$current_link"
 switched=1
 
 if [[ "${PLOSCA_RELOAD_CADDY:-0}" == "1" ]]; then
-  caddy validate --config /etc/caddy/Caddyfile
-  caddy reload --config /etc/caddy/Caddyfile --force
+  caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+  caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile --force
 fi
 
 complete=1
