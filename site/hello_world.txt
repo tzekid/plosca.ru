@@ -35,29 +35,4 @@ The next thing I discovered was entr
 src/* |
 entr
 -p ./compile.sh A goal on the todo list is only compiling the files that were changed, or react to edge cases when two or more files need changing. Lastly, something that’s in the works™ is automatically including the reading time of each article after the title. While implementing that I found wc
-, a tool that prints character, word, line &c. count. Small things like this make your life easier. Thanks for reading so far and I hope you’ve found something useful here! Related
-Prose
-older poems and writing samples.
-About
-current profile, work focus, and contact links.
-Generated context
-Related
-Pages explicitly connected to this page.
-Prose
-Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.
-About
-About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.
-Backlinks
-Local pages that link here.
-Ilie Ploscaru
-Personal site of Ilie Ploscaru, interested in psychology and tech.
-Prose
-Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.
-Similar
-Small tag-based suggestions from the local manifest.
-Ilie Ploscaru
-Personal site of Ilie Ploscaru, interested in psychology and tech.
-About
-About Ilie Ploscaru: full-stack developer and data engineer focused on data platforms, BI, and automation.
-Prose
-Prose by Ilie Ploscaru: old poems, essays, thoughts, and writing samples.
+, a tool that prints character, word, line &c. count. Small things like this make your life easier. Thanks for reading so far and I hope you’ve found something useful here!
