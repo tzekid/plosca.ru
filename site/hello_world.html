@@ -1,12 +1,8 @@
 <!doctype html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<html lang="en">
     <head>
         <meta charset="utf-8" />
-        <meta name="generator" content="pandoc" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0, user-scalable=yes"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="dcterms.date" content="2019-01-01" />
         <title>Hello World</title>
     <meta name="description" content="Hello World — first post by Ilie Ploscaru introducing the site and its themes." />
@@ -29,7 +25,6 @@
             href="/favicon-16x16.png"
         />
         <link rel="manifest" href="/site.webmanifest" />
-        <meta name="msapplication-TileColor" content="#d64937" />
         <meta name="theme-color" content="#ffffff" />
 
         <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
@@ -41,41 +36,15 @@
         <link rel="alternate" type="text/plain" href="/hello_world.txt" />
         <link rel="stylesheet" href="/style.css" />
     </head>
-    <body>
-        <span id="top" aria-hidden="true"></span>
-
-        <!--
-
-    __                .__   .__    .___
-  _/  |_________ ____ |  | _|__| __| _/
-  \   __\___   // __ \|  |/ /  |/ __ |
-   |  |  /  __/\  ___/|    <|  / /_/ |
-   |__| /_____ \\___  >__|_ \__\____ |
-              \/    \/     \/       \/
-
-  `Giant ascii art embedded in every page of your site is how you
-  show other people that YOU CARE.` - aerotwist
-
-  You looked at the source. No matter who you are, I like you now.
-  No matter what you do, keep up the good work :)
-
-  Much <3'z
-
-  kid
--->
-
-        <div class="site-shell">
-            <nav class="nav" aria-label="Primary">
-                <input type="checkbox" id="nav" class="nav-toggle" aria-label="Toggle navigation" aria-controls="primary-navigation" />
+    <body id="top">
+        <nav class="nav" aria-label="Primary">
+                <input type="checkbox" id="nav" class="nav-toggle sr-only" aria-label="Toggle navigation" aria-controls="primary-navigation" />
                 <label for="nav" class="nav-btn">
                     <i></i>
                     <i></i>
                     <i></i>
                 </label>
-                <div class="logo">
-                    <!-- <a href="/"><{ tzekid }></a> -->
-                    <a href="/">&lt;{ x }&gt;</a>
-                </div>
+                <div class="logo"><a href="/">&lt;{ x }&gt;</a></div>
                 <button class="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false">
                     <span aria-hidden="true">&lt;{ ◐ }&gt;</span>
                 </button>
@@ -86,9 +55,8 @@
                         <li><a href="/resume.pdf">Resume</a></li>
                     </ul>
                 </div>
-            </nav>
-        </div>
-        <main id="main">
+        </nav>
+        <main>
         <article class="article-with-summary">
             <header id="title-block-header" class="article-header--with-summary">
                 <h1 class="title">Hello World</h1>
@@ -165,7 +133,6 @@
                 scripts. The time ‘compiling’ the whole site went from over 10
                 seconds to just about a second.
             </p>
-            <!-- ```{.bash .numberLines startFrom="100"} -->
             <div class="sourceCode" id="cb1" data-code-block>
                 <div class="code-toolbar">
                     <span class="code-language">Bash</span>
@@ -189,7 +156,6 @@
                 that watches for file changes and performs commands you give it
                 when one occurs.
             </p>
-            <!-- ```{.bash .numberLines startFrom="100"} -->
             <div class="sourceCode" id="cb2" data-code-block>
                 <div class="code-toolbar">
                     <span class="code-language">Bash</span>
@@ -225,13 +191,6 @@
                 Thanks for reading so far and I hope you’ve found something
                 useful here!
             </p>
-            <!--
-### Topics I _may_ cover in the future
-
-- society. a term misunderstood and misused.
-- anger. why it is healthy and we need to learn to channel it.
-- parallelism and functional programming. how to get started?
-- stoicism. a self report -->
             <a class="up-btn" href="#top">&lt;{ ⇡ }&gt;</a>
         </article>
         </main>

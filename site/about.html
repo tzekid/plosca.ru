@@ -1,12 +1,8 @@
 <!doctype html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<html lang="en">
     <head>
         <meta charset="utf-8" />
-        <meta name="generator" content="pandoc" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0, user-scalable=yes"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="author" content="Ilie Ploscaru" />
         <title>About</title>
         <meta
@@ -32,10 +28,8 @@
             href="/favicon-16x16.png"
         />
         <link rel="manifest" href="/site.webmanifest" />
-        <meta name="msapplication-TileColor" content="#d64937" />
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="preload" href="/style.css" as="style" />
         <link
             rel="preload"
             as="font"
@@ -53,43 +47,16 @@
         <script src="/theme.js"></script>
         <script src="/preview.js" defer></script>
         <link rel="stylesheet" href="/style.css" />
-        <!-- about page specific styles moved to /style.css -->
     </head>
-    <body>
-        <span id="top" aria-hidden="true"></span>
-
-        <!--
-
-    __                .__   .__    .___
-  _/  |_________ ____ |  | _|__| __| _/
-  \   __\___   // __ \|  |/ /  |/ __ |
-   |  |  /  __/\  ___/|    <|  / /_/ |
-   |__| /_____ \\___  >__|_ \__\____ |
-              \/    \/     \/       \/
-
-  `Giant ascii art embedded in every page of your site is how you
-  show other people that YOU CARE.` - aerotwist
-
-  You looked at the source. No matter who you are, I like you now.
-  No matter what you do, keep up the good work :)
-
-  Much <3'z
-
-  kid
--->
-
-        <div class="site-shell">
-            <nav class="nav" aria-label="Primary">
-                <input type="checkbox" id="nav" class="nav-toggle" aria-label="Toggle navigation" aria-controls="primary-navigation" />
+    <body id="top">
+        <nav class="nav" aria-label="Primary">
+                <input type="checkbox" id="nav" class="nav-toggle sr-only" aria-label="Toggle navigation" aria-controls="primary-navigation" />
                 <label for="nav" class="nav-btn">
                     <i></i>
                     <i></i>
                     <i></i>
                 </label>
-                <div class="logo">
-                    <!-- <a href="/"><{ tzekid }></a> -->
-                    <a href="/">&lt;{ x }&gt;</a>
-                </div>
+                <div class="logo"><a href="/">&lt;{ x }&gt;</a></div>
                 <button class="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false">
                     <span aria-hidden="true">&lt;{ ◐ }&gt;</span>
                 </button>
@@ -100,20 +67,19 @@
                         <li><a href="/resume.pdf">Resume</a></li>
                     </ul>
                 </div>
-            </nav>
-        </div>
-        <main id="main">
+        </nav>
+        <main>
         <article class="about-page">
             <header id="title-block-header">
                 <h1 class="title">Ilie Ploscaru</h1>
                 <p class="author">Full‑Stack Developer &amp; Data Engineer</p>
 
                 <p class="header-cta">
-                    <a href="/resume.pdf" download data-preview-disabled="true"> Download Resume (PDF) </a>
+                    <a href="/resume.pdf" download> Download Resume (PDF) </a>
                 </p>
             </header>
 
-            <section class="about-section fw-block" id="at-a-glance">
+            <section class="about-section" id="at-a-glance">
                 <header class="about-section-head">
                     <h2>At a Glance</h2>
                 </header>
@@ -127,7 +93,7 @@
                         >Languages: EN / DE / RO / FR (basic)</span
                     >
                 </div>
-                <ul class="pill-list key-pills mt-tight">
+                <ul class="pill-list">
                     <li>Data Eng</li>
                     <li>BI</li>
                     <li>Full‑Stack</li>
@@ -137,7 +103,7 @@
                 </ul>
             </section>
 
-            <section class="about-section fw-block">
+            <section class="about-section">
                 <header class="about-section-head">
                     <h2>Core Competencies</h2>
                 </header>
@@ -172,7 +138,7 @@
                 </div>
             </section>
 
-            <section class="about-section fw-block" id="experience">
+            <section class="about-section" id="experience">
                 <header class="about-section-head">
                     <h2>Experience</h2>
                 </header>
@@ -620,11 +586,11 @@
                     </details>
                 </div>
             </section>
-            <section class="about-section fw-block" id="connect">
+            <section class="about-section" id="connect">
                 <header class="about-section-head">
                     <h2>Connect</h2>
                 </header>
-                <div class="connect-grid stretch">
+                <div class="connect-grid">
                     <div>
                         <p class="no-top-margin">
                             Based in Frankfurt. Open to high‑impact product /
@@ -655,7 +621,7 @@
                 </div>
             </section>
 
-            <p class="center mt-spacious">
+            <p class="mt-spacious">
                 <a class="up-btn" href="#top">&lt;{ ⇡ }&gt;</a>
             </p>
         </article>

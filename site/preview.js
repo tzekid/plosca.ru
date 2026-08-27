@@ -92,7 +92,6 @@
         const box = target();
         if (!box) throw new Error("preview target is missing");
         box.replaceWith(replacement);
-        replacement.classList.toggle("link-preview--interactive", Boolean(replacement.querySelector("a, button")));
         replacement.hidden = false;
         replacement.removeAttribute("aria-busy");
         position();

@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Ilie Ploscaru</title>
     <meta name="description" content="Ilie Ploscaru — personal site about psychology and tech." />
 
@@ -12,35 +11,25 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="msapplication-TileColor" content="#d64937" />
     <meta name="theme-color" content="#ffffff" />
 
-    <!-- Preload fonts early (keep in head for quicker connect / possible early hints) -->
     <link rel="preload" as="font" type="font/woff2" href="/PH1InQe0rvp_yN3TzIuyyQ.woff2" crossorigin />
     <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
 
-    <!-- Load full stylesheet normally. -->
-    <link rel="preload" href="/style.css" as="style" />
     <script src="/theme.js"></script>
     <script src="/preview.js" defer></script>
     <link rel="stylesheet" href="/style.css" />
 </head>
 
 <body>
-    <span id="top" aria-hidden="true"></span>
-
-    <div class="site-shell">
-        <nav class="nav" aria-label="Primary">
-            <input type="checkbox" id="nav" class="nav-toggle" aria-label="Toggle navigation" aria-controls="primary-navigation" />
+    <nav class="nav" aria-label="Primary">
+            <input type="checkbox" id="nav" class="nav-toggle sr-only" aria-label="Toggle navigation" aria-controls="primary-navigation" />
             <label for="nav" class="nav-btn">
                 <i></i>
                 <i></i>
                 <i></i>
             </label>
-            <div class="logo">
-                <!-- <a href="/"><{ tzekid }></a> -->
-                <a href="/">&lt;{ x }&gt;</a>
-            </div>
+            <div class="logo"><a href="/">&lt;{ x }&gt;</a></div>
             <button class="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false">
                 <span aria-hidden="true">&lt;{ ◐ }&gt;</span>
             </button>
@@ -51,20 +40,17 @@
                     <li><a href="/resume.pdf">Resume</a></li>
                 </ul>
             </div>
-        </nav>
-    </div>
-    <main id="main">
+    </nav>
+    <main>
         <div class="home-box">
             <h1><span>Mircea</span> Ilie</h1>
             <h1>Ploscaru</h1>
 
             <p>Interested in psychology and tech.</p>
 
-            <article>
-                <div class="article">
-                    <span class="a-date">1 January 2019</span><a class="a-title" href="/hello_world" data-previewable data-preview-src="/previews/3979d6c13901b2e1.html">Hello World</a>
-                </div>
-            </article>
+            <div class="article">
+                <span class="a-date">1 January 2019</span><a class="a-title" href="/hello_world" data-previewable data-preview-src="/previews/3979d6c13901b2e1.html">Hello World</a>
+            </div>
         </div>
     </main>
 
