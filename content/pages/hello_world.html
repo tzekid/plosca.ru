@@ -36,6 +36,7 @@
         <link rel="preload" as="font" type="font/woff2" href="/6xKtdSZaM9iE8KbpRA_hK1QN.woff2" crossorigin />
         <script src="{{asset:theme.js}}"></script>
         <script src="{{asset:preview.js}}" defer></script>
+        <script src="{{asset:code.js}}" defer></script>
         <link rel="alternate" type="text/markdown" href="/hello_world.md" />
         <link rel="alternate" type="text/plain" href="/hello_world.txt" />
         <link rel="stylesheet" href="{{asset:style.css}}" />
@@ -165,12 +166,22 @@
                 seconds to just about a second.
             </p>
             <!-- ```{.bash .numberLines startFrom="100"} -->
-            <div class="sourceCode" id="cb1">
+            <div class="sourceCode" id="cb1" data-code-block>
+                <div class="code-toolbar">
+                    <span class="code-language">Bash</span>
+                    <span class="code-overflow-hint" aria-hidden="true">
+                        <span class="code-hint-touch">Swipe →</span>
+                        <span class="code-hint-pointer">Scroll →</span>
+                    </span>
+                    <button class="code-copy" type="button" hidden>Copy</button>
+                    <span class="code-copy-status sr-only" aria-live="polite"></span>
+                </div>
                 <pre
-                    class="sourceCode bash"
-                ><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1"></a><span class="co"># a sample line from `scripts/process.sh`  </span></span>
+                    class="sourceCode bash" tabindex="0" role="region" aria-label="Bash code: site build pipeline" aria-describedby="cb1-guidance"
+                ><code class="sourceCode bash" id="cb1-code"><span id="cb1-1"><a href="#cb1-1"></a><span class="co"># a sample line from `scripts/process.sh`  </span></span>
 <span id="cb1-2"><a href="#cb1-2"></a><span class="ex">scripts/add_checkboxes.sh</span> <span class="va">$1</span> <span class="kw">|</span> <span class="ex">pandoc</span> -s --toc -c style.css --katex <span class="kw">|</span><span class="ex">\ </span> </span>
 <span id="cb1-3"><a href="#cb1-3"></a><span class="ex">scripts/refine.sh</span> <span class="op">&gt;</span> <span class="va">$new_file</span>  </span></code></pre>
+                <span class="sr-only" id="cb1-guidance">Scrollable Bash code. Use horizontal scrolling to read long lines.</span>
             </div>
             <p>
                 The next thing I discovered was
@@ -179,11 +190,21 @@
                 when one occurs.
             </p>
             <!-- ```{.bash .numberLines startFrom="100"} -->
-            <div class="sourceCode" id="cb2">
+            <div class="sourceCode" id="cb2" data-code-block>
+                <div class="code-toolbar">
+                    <span class="code-language">Bash</span>
+                    <span class="code-overflow-hint" aria-hidden="true">
+                        <span class="code-hint-touch">Swipe →</span>
+                        <span class="code-hint-pointer">Scroll →</span>
+                    </span>
+                    <button class="code-copy" type="button" hidden>Copy</button>
+                    <span class="code-copy-status sr-only" aria-live="polite"></span>
+                </div>
                 <pre
-                    class="sourceCode bash"
-                ><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1"></a><span class="co"># automagically compile when a file in `src/` changes  </span></span>
+                    class="sourceCode bash" tabindex="0" role="region" aria-label="Bash code: rebuild on file changes" aria-describedby="cb2-guidance"
+                ><code class="sourceCode bash" id="cb2-code"><span id="cb2-1"><a href="#cb2-1"></a><span class="co"># automagically compile when a file in `src/` changes  </span></span>
 <span id="cb2-2"><a href="#cb2-2"></a><span class="fu">ls</span> src/* <span class="kw">|</span> <span class="ex">entr</span> -p ./compile.sh  </span></code></pre>
+                <span class="sr-only" id="cb2-guidance">Scrollable Bash code. Use horizontal scrolling to read long lines.</span>
             </div>
             <p>
                 A goal on the todo list is only compiling the files that were

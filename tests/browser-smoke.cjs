@@ -36,6 +36,32 @@ const pixel = Buffer.from(
   "base64",
 );
 
+function parseCssColor(value) {
+  const parts = value.match(/[\d.]+/g)?.map(Number);
+  if (!parts || parts.length < 3) throw new Error(`unsupported CSS color: ${value}`);
+  return { red: parts[0], green: parts[1], blue: parts[2], alpha: parts[3] ?? 1 };
+}
+
+function composite(foreground, background) {
+  return {
+    red: foreground.red * foreground.alpha + background.red * (1 - foreground.alpha),
+    green: foreground.green * foreground.alpha + background.green * (1 - foreground.alpha),
+    blue: foreground.blue * foreground.alpha + background.blue * (1 - foreground.alpha),
+    alpha: 1,
+  };
+}
+
+function contrastRatio(first, second) {
+  const channel = (value) => {
+    const normalized = value / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = (color) => 0.2126 * channel(color.red) + 0.7152 * channel(color.green) + 0.0722 * channel(color.blue);
+  const high = Math.max(luminance(first), luminance(second));
+  const low = Math.min(luminance(first), luminance(second));
+  return (high + 0.05) / (low + 0.05);
+}
+
 async function interceptAnalytico(page, counts) {
   await page.route("https://analytico.plosca.ru/**", async (route) => {
     const url = new URL(route.request().url());
@@ -225,6 +251,123 @@ async function checkCancellation(browser) {
   await context.close();
 }
 
+async function checkCodeBlocks(browser) {
+  for (const width of [320, 390, 768, 1440]) {
+    const context = await browser.newContext({
+      viewport: { width, height: width <= 390 ? 844 : 900 },
+      colorScheme: width === 768 ? "light" : "dark",
+      reducedMotion: "reduce",
+      hasTouch: width <= 390,
+      isMobile: width <= 390,
+    });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+      origin: new URL(baseUrl).origin,
+    });
+    const page = await context.newPage();
+    const counts = { tracker: 0, connect: 0, pixel: 0 };
+    const errors = collectErrors(page);
+    await interceptAnalytico(page, counts);
+    await page.goto(`${baseUrl}/hello_world`, { waitUntil: "load" });
+    await page.waitForFunction(() => document.querySelector("[data-code-block]")?.classList.contains("code-block-ready"));
+
+    const blocks = page.locator("[data-code-block]");
+    assert.equal(await blocks.count(), 2);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
+
+    const first = blocks.first();
+    const scroller = first.locator("pre.sourceCode");
+    assert.equal(await scroller.getAttribute("tabindex"), width <= 640 ? "0" : null);
+    assert.equal(await scroller.getAttribute("role"), width <= 640 ? "region" : null);
+    assert.equal(await scroller.getAttribute("aria-label"), "Bash code: site build pipeline");
+    assert.equal(await scroller.getAttribute("aria-describedby"), width <= 640 ? "cb1-guidance" : null);
+    assert.equal(await first.locator(".code-language").textContent(), "Bash");
+    assert.equal(await first.locator(".code-copy").isVisible(), true);
+
+    const metrics = await first.evaluate((block) => {
+      const pre = block.querySelector("pre.sourceCode");
+      const body = document.querySelector("article > p");
+      return {
+        overflowing: pre.scrollWidth > pre.clientWidth,
+        codeSize: Number.parseFloat(getComputedStyle(pre).fontSize),
+        bodySize: Number.parseFloat(getComputedStyle(body).fontSize),
+      };
+    });
+    assert.equal(metrics.overflowing, width <= 640);
+    assert(metrics.codeSize < metrics.bodySize, "code must stay subordinate to article copy");
+    assert.equal(await first.evaluate((block) => block.classList.contains("can-scroll-right")), width <= 640);
+
+    const colors = await first.evaluate((block) => {
+      const background = getComputedStyle(block).backgroundColor;
+      const page = getComputedStyle(document.body).backgroundColor;
+      const tokens = [".co", ".ex", ".va", ".kw", ".fu", ".op"].map((selector) => ({
+        selector,
+        color: getComputedStyle(document.querySelector(`code.sourceCode ${selector}`)).color,
+      }));
+      return { background, page, tokens };
+    });
+    const codeBackground = composite(parseCssColor(colors.background), parseCssColor(colors.page));
+    for (const token of colors.tokens) {
+      assert(
+        contrastRatio(parseCssColor(token.color), codeBackground) >= 4.5,
+        `${token.selector} must retain readable contrast`,
+      );
+    }
+
+    if (width <= 390) {
+      assert.equal(await first.locator(".code-overflow-hint").isVisible(), true);
+      assert.equal(await first.locator(".code-hint-touch").isVisible(), true);
+      await scroller.focus();
+      assert.notEqual(await scroller.evaluate((pre) => getComputedStyle(pre).boxShadow), "none");
+      await scroller.evaluate((pre) => { pre.scrollLeft = pre.scrollWidth; });
+      await page.waitForFunction(() => !document.querySelector("[data-code-block]").classList.contains("can-scroll-right"));
+      assert.equal(await first.locator(".code-overflow-hint").evaluate((node) => getComputedStyle(node).opacity), "0");
+      assert.equal(await first.evaluate((block) => block.classList.contains("can-scroll-left")), true);
+
+      const source = await first.locator("code.sourceCode").textContent();
+      await first.locator(".code-copy").click();
+      await page.waitForFunction(() => document.querySelector(".code-copy")?.textContent === "Copied");
+      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), source.replace(/\n$/, ""));
+    }
+    if (width === 320) {
+      await page.evaluate(() => { document.documentElement.style.fontSize = "32px"; });
+      const enlarged = await first.evaluate((block) => {
+        const toolbar = block.querySelector(".code-toolbar");
+        const copy = block.querySelector(".code-copy").getBoundingClientRect();
+        const bounds = block.getBoundingClientRect();
+        return {
+          toolbarFits: toolbar.scrollWidth <= toolbar.clientWidth,
+          copyFits: copy.left >= bounds.left && copy.right <= bounds.right,
+        };
+      });
+      assert.equal(enlarged.toolbarFits, true, "the toolbar must reflow at 200% text size");
+      assert.equal(enlarged.copyFits, true, "Copy must remain reachable at 200% text size");
+    }
+    assert.deepEqual(errors, []);
+    await context.close();
+  }
+}
+
+async function checkCodeCopyFailure(browser) {
+  const context = await browser.newContext({ viewport: { width: 320, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  const counts = { tracker: 0, connect: 0, pixel: 0 };
+  const errors = collectErrors(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => { throw new DOMException("Denied", "NotAllowedError"); } },
+    });
+  });
+  await interceptAnalytico(page, counts);
+  await page.goto(`${baseUrl}/hello_world`, { waitUntil: "load" });
+  const first = page.locator("[data-code-block]").first();
+  await first.locator(".code-copy").click();
+  await page.waitForFunction(() => document.querySelector(".code-copy")?.textContent === "Select");
+  assert.equal(await first.locator(".code-copy-status").textContent(), "Copy failed. Select the code manually.");
+  assert.deepEqual(errors, []);
+  await context.close();
+}
+
 async function checkAboutAndRoutes(browser) {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 900 }]) {
     const context = await browser.newContext({ viewport, colorScheme: "light" });
@@ -267,6 +410,7 @@ async function checkAboutAndRoutes(browser) {
     assert.equal(response.status(), 200, `/previews/${name} must exist`);
   }
   assert.equal((await context.request.get(`${baseUrl}/preview.js`)).status(), 200);
+  assert.equal((await context.request.get(`${baseUrl}/code.js`)).status(), 200);
   assert.equal((await context.request.get(`${baseUrl}/vendor/htmx.min.js`)).status(), 404);
   assert.equal((await context.request.get(`${baseUrl}/metadata/pages.json`)).status(), 404);
   const missing = await context.request.get(`${baseUrl}/definitely-missing-browser-route`);
@@ -288,6 +432,14 @@ async function checkBaseline(browser) {
   assert.equal(counts.tracker, 0, "JavaScript-disabled clients must not request the tracker");
   assert.equal(counts.pixel, 1, "JavaScript-disabled clients must request the analytics pixel");
 
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto(`${baseUrl}/hello_world`, { waitUntil: "load" });
+  assert.equal(await page.locator(".code-language").first().isVisible(), true);
+  assert.equal(await page.locator(".code-overflow-hint").first().isVisible(), true);
+  assert.equal(await page.locator(".code-copy").first().isVisible(), false);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
   const about = page.locator('a[href="/about"]').first();
   assert.equal(await about.isVisible(), true, "native navigation must remain visible");
   await Promise.all([page.waitForURL(`${baseUrl}/about`), about.click()]);
@@ -300,6 +452,8 @@ async function checkBaseline(browser) {
   try {
     await checkEnhanced(browser);
     await checkCancellation(browser);
+    await checkCodeBlocks(browser);
+    await checkCodeCopyFailure(browser);
     await checkAboutAndRoutes(browser);
     await checkBaseline(browser);
   } finally {

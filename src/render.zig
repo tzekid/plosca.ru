@@ -8,6 +8,7 @@ pub const AssetUrls = struct {
     style: []const u8,
     theme: []const u8,
     preview: []const u8,
+    code: []const u8,
 };
 
 pub fn page(
@@ -62,6 +63,7 @@ fn replaceAssetMarkers(allocator: std.mem.Allocator, input: []const u8, urls: As
         .{ .marker = "{{asset:style.css}}", .value = urls.style },
         .{ .marker = "{{asset:theme.js}}", .value = urls.theme },
         .{ .marker = "{{asset:preview.js}}", .value = urls.preview },
+        .{ .marker = "{{asset:code.js}}", .value = urls.code },
     };
 
     var current = try allocator.dupe(u8, input);

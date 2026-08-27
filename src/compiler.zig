@@ -32,8 +32,8 @@ pub fn buildSite(io: Io, gpa: std.mem.Allocator) !void {
     try publish(io);
 
     std.debug.print(
-        "built {s}: {d} pages, {d} previews, assets style={s} theme={s} preview={s}\n",
-        .{ output_path, content.pages.len, preview_count, &versions.style, &versions.theme, &versions.preview },
+        "built {s}: {d} pages, {d} previews, assets style={s} theme={s} preview={s} code={s}\n",
+        .{ output_path, content.pages.len, preview_count, &versions.style, &versions.theme, &versions.preview, &versions.code },
     );
 }
 

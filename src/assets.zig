@@ -8,6 +8,7 @@ pub const Versions = struct {
     style: [16]u8,
     theme: [16]u8,
     preview: [16]u8,
+    code: [16]u8,
 };
 
 pub const Copy = struct {
@@ -19,6 +20,7 @@ pub const copies = [_]Copy{
     .{ .source = "assets/style.css", .output = "style.css" },
     .{ .source = "assets/theme.js", .output = "theme.js" },
     .{ .source = "assets/preview.js", .output = "preview.js" },
+    .{ .source = "assets/code.js", .output = "code.js" },
     .{ .source = "assets/fonts/6xKtdSZaM9iE8KbpRA_hK1QN.woff2", .output = "6xKtdSZaM9iE8KbpRA_hK1QN.woff2" },
     .{ .source = "assets/fonts/PH1InQe0rvp_yN3TzIuyyQ.woff2", .output = "PH1InQe0rvp_yN3TzIuyyQ.woff2" },
     .{ .source = "assets/images/resume-preview-27833c1a5937f8c5.jpg", .output = "resume-preview-27833c1a5937f8c5.jpg" },
@@ -48,6 +50,7 @@ pub fn readVersions(io: Io, allocator: std.mem.Allocator) !Versions {
         .style = try hashFile(io, allocator, "assets/style.css"),
         .theme = try hashFile(io, allocator, "assets/theme.js"),
         .preview = try hashFile(io, allocator, "assets/preview.js"),
+        .code = try hashFile(io, allocator, "assets/code.js"),
     };
 }
 
@@ -56,6 +59,7 @@ pub fn urls(allocator: std.mem.Allocator, versions: Versions) !render.AssetUrls 
         .style = try std.fmt.allocPrint(allocator, "/style.css?v={s}", .{&versions.style}),
         .theme = try std.fmt.allocPrint(allocator, "/theme.js?v={s}", .{&versions.theme}),
         .preview = try std.fmt.allocPrint(allocator, "/preview.js?v={s}", .{&versions.preview}),
+        .code = try std.fmt.allocPrint(allocator, "/code.js?v={s}", .{&versions.code}),
     };
 }
 
