@@ -4,27 +4,29 @@ on:
   push:
   pull_request:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+permissions:
+  contents: read
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: sudo apt-get update && sudo apt-get install -y brotli
       - id: zig
         run: echo "version=$(tr -d '\n' < .zigversion)" >> "$GITHUB_OUTPUT"
       - uses: mlugg/setup-zig@v2.2.1
         with:
           version: ${{ steps.zig.outputs.version }}
       - run: test "$(zig version)" = "$(tr -d '\n' < .zigversion)"
-      - run: zig build --system zig-pkg css
-      - run: git diff --exit-code -- static
-      - run: zig build --system zig-pkg check-site
-      - run: zig fmt --check build.zig build.zig.zon src
-      - run: zig build --system zig-pkg test
-      - run: zig build --system zig-pkg -Doptimize=ReleaseSafe
-      - run: ./scripts/smoke.sh
-      - run: ./tests/setup-browser-e2e.sh
-      - run: zig build --system zig-pkg browser-smoke
+      - run: zig fmt --check build.zig build.zig.zon src content/manifest.zig
+      - run: zig build test -Doptimize=ReleaseFast
+      - run: zig build -Doptimize=ReleaseFast
+      - run: zig-out/bin/sitec build
+      - run: zig-out/bin/sitec check
+      - run: zig build deterministic-build -Doptimize=ReleaseFast
+      - run: tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf plosca-dist.tar.gz -C dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plosca-dist
+          path: plosca-dist.tar.gz
+          if-no-files-found: error

@@ -25,6 +25,8 @@ nginx.conf
 *.bak.*
 *.new
 dist/
+dist.tmp/
+dist.previous/
 
 ploscaru
 webapp

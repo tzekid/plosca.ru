@@ -1,0 +1,70 @@
+www.plosca.ru {
+	redir https://plosca.ru{uri} permanent
+}
+
+plosca.ru {
+	encode zstd gzip
+
+	log {
+		output stdout
+		format json
+	}
+
+	root * /etc/caddy/conf.d/plosca-site/current
+
+	header {
+		Content-Security-Policy "default-src 'self'; base-uri 'none'; font-src 'self'; img-src 'self' data: https://analytico.plosca.ru; script-src 'self' https://analytico.plosca.ru; style-src 'self'; connect-src 'self' https://analytico.plosca.ru; object-src 'none'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests"
+		Cross-Origin-Resource-Policy "same-origin"
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	@immutable path_regexp immutable \.(?:css|js|woff2|png|jpg|pdf|webmanifest)$
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+	@revalidate {
+		not path_regexp revalidate_immutable \.(?:css|js|woff2|png|jpg|pdf|webmanifest)$
+	}
+	header @revalidate Cache-Control "public, no-cache"
+
+	handle /stargraph* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	@unsupported not method GET HEAD
+	handle @unsupported {
+		header Allow "GET, HEAD"
+		respond 405
+	}
+
+	handle {
+		route {
+			@archive_slash path /archive/
+			error @archive_slash 404
+			try_files {path}.html {path}/index.html {path}
+			file_server
+		}
+	}
+
+	handle_errors {
+		@not_found expression {http.error.status_code} == 404
+		handle @not_found {
+			rewrite * /404.html
+			header {
+				Cache-Control "no-store"
+				Content-Security-Policy "default-src 'self'; base-uri 'none'; font-src 'self'; img-src 'self' data: https://analytico.plosca.ru; script-src 'self' https://analytico.plosca.ru; style-src 'self'; connect-src 'self' https://analytico.plosca.ru; object-src 'none'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests"
+				Cross-Origin-Resource-Policy "same-origin"
+				Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+				Referrer-Policy "strict-origin-when-cross-origin"
+				Strict-Transport-Security "max-age=31536000; includeSubDomains"
+				X-Content-Type-Options "nosniff"
+				X-Frame-Options "DENY"
+				-Server
+			}
+			file_server
+		}
+	}
+}
