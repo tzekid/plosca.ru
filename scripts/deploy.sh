@@ -65,7 +65,8 @@ else
   diff -qr dist "$staging_dir"
   mv "$staging_dir" "$release_dir"
 fi
-chmod -R a-w "$release_dir"
+find "$release_dir" -type f -exec chmod 0444 {} +
+find "$release_dir" -type d -exec chmod 0555 {} +
 
 ln -s "releases/$release_id" "$next_link"
 mv -Tf "$next_link" "$current_link"
