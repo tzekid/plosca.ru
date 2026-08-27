@@ -24,7 +24,10 @@ fi
 
 cleanup() {
   if [[ -L "$next_link" ]]; then unlink "$next_link"; fi
-  if [[ -d "$staging_dir" ]]; then rm -rf -- "$staging_dir"; fi
+  if [[ -d "$staging_dir" ]]; then
+    chmod -R u+w "$staging_dir" 2>/dev/null || true
+    rm -rf -- "$staging_dir"
+  fi
 }
 trap cleanup EXIT
 
@@ -35,10 +38,10 @@ else
   mkdir "$staging_dir"
   rsync -a "$repo_dir/site/" "$staging_dir/"
   diff -qr "$repo_dir/site" "$staging_dir"
-  find "$staging_dir" -type f -exec chmod 0444 {} +
-  find "$staging_dir" -type d -exec chmod 0555 {} +
   mv "$staging_dir" "$release_dir"
 fi
+find "$release_dir" -type f -exec chmod 0444 {} +
+find "$release_dir" -type d -exec chmod 0555 {} +
 
 ln -s "releases/$release_id" "$next_link"
 mv -Tf "$next_link" "$current_link"
