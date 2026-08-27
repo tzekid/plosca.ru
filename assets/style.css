@@ -895,6 +895,8 @@ pre.sourceCode {
   margin: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   padding: 0;
   max-width: 100%;
   min-width: 0;
