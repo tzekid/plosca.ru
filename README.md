@@ -25,14 +25,43 @@ Deploy the committed `site/` tree with:
 ./scripts/deploy.sh
 ```
 
-The script verifies that the deployed files exactly match `site/`, makes the
-release read-only, and atomically switches the `current` symlink:
+The script captures one full commit ID and exports its `site/` tree with Git.
+Tracked changes must be committed; untracked and ignored files are excluded.
+It compares any existing release before reuse, makes files read-only, and
+serializes publishers with `.deploy.lock`. Promotion atomically switches
+`current`; `previous` retains the prior distinct release. An identical redeploy
+preserves that rollback target.
 
 ```text
 /etc/caddy/conf.d/plosca-site/
-  current -> releases/<commit>/
-  releases/<commit>/
+  current -> releases/<full-commit>/
+  previous -> releases/<prior-commit>/
+  releases/<full-commit>/
 ```
 
-Caddy follows the symlink on each request, so content deployments do not need
-a reload. Reload Caddy only after changing its configuration.
+Run as an account that can write the release root. To rehearse elsewhere, set
+`PLOSCA_RELEASE_ROOT=/absolute/disposable/path`. The focused regression journey
+runs entirely in temporary directories:
+
+```sh
+python3 tests/deploy.py
+```
+
+To roll back, use the same publication lock and atomically select `previous`:
+
+```sh
+root=/etc/caddy/conf.d/plosca-site
+(
+  flock 9
+  test -d "$root/previous" || exit 1
+  next=$(mktemp -d "$root/.rollback-XXXXXXXX")
+  trap 'rm -rf -- "$next"' EXIT
+  ln -s "$(readlink "$root/previous")" "$next/current"
+  mv -Tf "$next/current" "$root/current"
+) 9>"$root/.deploy.lock"
+```
+
+This selects the saved release without deleting either release. Caddy follows
+`current` on each request, so content deployments do not need a reload. Reload
+Caddy only after changing its configuration. Script/documentation changes alone
+do not require republishing unchanged site content.
