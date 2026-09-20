@@ -70,3 +70,63 @@ Delivery: committed and pushed to `master`; no production publication is needed
 for this script/test/documentation change. Caddy, current public content, and
 existing rollback releases are preserved. The primary checkout is advanced only
 if its original tracked state and unrelated untracked files remain intact.
+
+## Follow-up: 2026-09-20
+
+- Refreshed clean tracked `master` remains `715ce07`; its site tree is identical
+  to the live immutable `47e47439c819` release. All 49 authored file bytes and
+  representative public routes/assets match. Caddy is active with zero restarts.
+  Untracked article/design/docs work and the historical worktree are preserved.
+- The publisher's full disposable failure/rollback/concurrency journey passes.
+  No authored source or deployment-script defect needs another rewrite.
+- Operational finding: production has no `previous` symlink, so the documented
+  rollback command cannot run. Retained release `d7de9b6b90f6` matches all bytes
+  of the current site's direct historical parent and uses the same working
+  tracker asset. Its only subsequent content change was timeline-rule centering.
+
+### Plan and acceptance
+
+Restore only the missing rollback pointer under the existing publication lock,
+using the verified direct-parent release. Preserve `current`, every release,
+Caddy configuration, all site bytes and unrelated working material. Prove the
+rollback recipe with these real source trees in a disposable root; then verify
+production current/previous identities, representative public bytes, active
+Caddy and preserved unrelated hashes. Commit only this follow-up record and
+push the intended default. There is no build/compiler/CI or content deployment
+required for a static metadata repair; do not add one.
+
+### Follow-up plan reviews
+
+- Pass 1, complete release/rollback review: directory mtimes do not establish
+  publication order, and an older tracker reference may no longer be served.
+  Select the direct Git ancestor by byte comparison and verify its tracker
+  remains available. Keep the live current pointer unchanged. Clean count reset.
+- Pass 2, complete functional review: inspected publisher cleanup, immutable
+  collisions, captured revision, root lock and executable regression results;
+  verified live/source bytes and prior-release ancestry. The repair restores
+  an existing documented operation without touching authored content. Zero
+  findings; clean pass 1.
+- Pass 3, complete preservation/operational review: reviewed lock coordination,
+  atomic pointer creation, rollback rehearsal, current/previous validation and
+  unrelated-file hashes. No remote change beyond the intended master push,
+  service restart, compiler migration or unrelated UI work is needed. Zero
+  findings; clean pass 2.
+
+### Follow-up implementation reviews
+
+- Pass 1, complete functional/recovery review: the documented lock-protected
+  rollback selected the verified prior source tree in a disposable rehearsal.
+  Production `previous` was then atomically restored to `d7de9b6b90f6` under the
+  same lock, with `current` still `47e47439c819`. All existing release/source
+  semantics and the publisher's failure/concurrency acceptance remain intact.
+  Zero findings; clean pass 1.
+- Pass 2, complete source/security/operations review: rechecked all 49 live file
+  bytes against source, public home/about/archive/CSS bytes, usable rollback
+  identity, active shared Caddy PID and all 47 unrelated file hashes. Caddy's
+  root-owned executable cannot be read through proc without unavailable root
+  access; this static metadata repair changes no proxy binary or service.
+  The deployable artifacts themselves are verified directly. The only tracked
+  change is this audit record. Zero findings; clean pass 2.
+
+Delivery: rollback metadata repaired in place; source record committed/pushed
+on master. No unchanged site content was republished and no service restarted.
